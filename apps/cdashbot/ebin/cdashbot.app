@@ -1,0 +1,9 @@
+{application,cdashbot,
+             [{description,"cdashbot"},
+              {vsn,"0.1"},
+              {registered,[]},
+              {applications,[kernel,inets,stdlib,exmpp,zucchini]},
+              {mod,{cdashbot_app,[]}},
+              {env,[]},
+              {modules,[cdashbot_api,cdashbot_app,cdashbot_sup,
+                        cdashbot_wrk]}]}.
