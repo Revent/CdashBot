@@ -1,0 +1,15 @@
+[xmpp]
+xmpp_host=""
+xmpp_account=""
+xmpp_password=""
+xmpp_resource=""
+xmpp_room=""
+xmpp_room_nickname=""
+xmpp_room_password=""
+xmpp_cont=""
+[cdash]
+cdash_url="http://open.cdash.org"
+cdash_user="user"
+cdash_password="password"
+projects_list="project"
+notify_strategy="all"
