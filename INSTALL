@@ -1,0 +1,10 @@
+1. mkdir -p ~/.config/cdashbot/ && cp config/* ~/.config/cdashbot/
+
+2. configure  ~/.config/cdashbot/cbotrc
+
+3. make deps
+
+4. make compile
+
+5. cd rel/cbot && sh bin/cbot console
+ 
