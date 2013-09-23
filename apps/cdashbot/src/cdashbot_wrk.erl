@@ -20,12 +20,11 @@
 %% ------------------------------------------------------------------
 
 -record( state, {session, name, rooms=[]}).
-
 %% ------------------------------------------------------------------
 %% API Function Exports
 %% ------------------------------------------------------------------
-
 -export([start_link/0, stop/0]).
+
 
 %% ------------------------------------------------------------------
 %% gen_server Function Exports
@@ -141,7 +140,7 @@ Filt = fun(X) ->
 		nomatch =/= re:run(X, Rexpc, [global])
 		end, 
 io:format("You received: ~s: ~s ~s~n", [To, Message, Rexp]), 
-	List = [ erlang:binary_to_list(X) || X <- proplists:get_all_values(<<"name">>, lists:append(jsx:decode(erlang:list_to_binary(Body))))],
+	List = [ erlang:binary_to_list(X) || X <- proplists:el (<<"name">>, lists:append(jsx:decode(erlang:list_to_binary(Body))))],
 	case string:tokens(To, "/")  of
 		[Conf, Nick] ->
 			exmpp_session:send_packet(State#state.session,
@@ -153,24 +152,12 @@ io:format("You received: ~s: ~s ~s~n", [To, Message, Rexp]),
 process_message("summary" = Message, Rexp, To, State) ->
 	{ok, {_, _, Body}} = httpc:request(?URL ++ ?API_SUMM ++ Rexp),
 	io:format("You received: ~s: ~s ~s~n", [To, Message, Rexp]),
-	List = jsx:decode(erlang:list_to_binary(Body)),
 	Builds = proplists:get_keys(jsx:decode(erlang:list_to_binary(Body))),
-	Summ  = lists:map(fun(X) -> lists:append([proplists:get_value(<<"name">>, 
-									lists:append(proplists:get_all_values(X, List))),
-								<<"on">>,
-								proplists:get_value(<<"buildname">>, 
-									lists:append(proplists:get_all_values(X, List))),
-								<<"Failed tests:">>],
-								lists:append(proplists:get_all_values(<<"name">>, lists:append(proplists:get_value(<<"tests">>, 
-									lists:append(proplists:get_all_values(X, List))))), [<<"~n">>]))
-						end,
-						Builds),
-	String = string:join([erlang:binary_to_list(X) || X <- lists:append(Summ)], ", "),
-
+	List = lists:map(fun(X) -> summ_gen(X, Rexp) end, Builds), 
 	case string:tokens(To, "/")  of
 		[Conf, Nick] ->
 			exmpp_session:send_packet(State#state.session,
-			 	exmpp_stanza:set_recipient(exmpp_message:groupchat(Nick ++ ": " ++ String),
+			 	exmpp_stanza:set_recipient(exmpp_message:groupchat(Nick ++ ": " ++ List),
 			 		 Conf));
 		_ ->
 		ok
@@ -210,3 +197,14 @@ process_received_packet(#state{name=Name} = State, #received_packet{packet_type=
 
 process_received_packet(_State, _Packet) ->
 	ok.
+
+summ_gen(Build, Rexp) ->
+	{ok, {_, _, Body}} = httpc:request(?URL ++ ?API_SUMM ++ Rexp),
+	ErlJson = jsx:decode(erlang:list_to_binary(Body)),
+	Name = erlang:binary_to_list(proplists:get_value(<<"name">>, 
+		lists:append(proplists:get_all_values(Build, ErlJson)))),
+	BuildName = erlang:binary_to_list(proplists:get_value(<<"buildname">>,
+		lists:append(proplists:get_all_values(Build, ErlJson)))),
+	Tests = string:join([erlang:binary_to_list(X) || X <- proplists:get_all_values(<<"name">>, lists:append(proplists:get_value(<<"tests">>,
+		lists:append(proplists:get_all_values(Build, ErlJson)))))], ", "),
+	io_lib:format("~s on ~s, Failed tests: ~sn", [Name, BuildName, Tests]). 
