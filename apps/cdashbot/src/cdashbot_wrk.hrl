@@ -13,3 +13,4 @@
 -define(HELP, file:read_file("/home/revent/.config/cdashbot/cbothelp")).
 -define(CONF,  os:getenv("HOME")  ++ "/.config/cdashbot/cbotrc").
 -define(CONT, cdashbot_wrk:get_value(xmpp_cont, xmpp)).
+-define(SUMM, "http://open.cdash.org/buildSummary.php?buildid=").

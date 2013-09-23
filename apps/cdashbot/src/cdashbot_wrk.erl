@@ -207,4 +207,5 @@ summ_gen(Build, Rexp) ->
 		lists:append(proplists:get_all_values(Build, ErlJson)))),
 	Tests = string:join([erlang:binary_to_list(X) || X <- proplists:get_all_values(<<"name">>, lists:append(proplists:get_value(<<"tests">>,
 		lists:append(proplists:get_all_values(Build, ErlJson)))))], ", "),
-	io_lib:format("~s on ~s, Failed tests: ~sn", [Name, BuildName, Tests]). 
+	Url = ?SUMM ++ erlang:binary_to_list(Build), 
+	io_lib:format("~s on ~s, Failed tests: ~s(~s)~n", [Name, BuildName, Tests, Url]). 
