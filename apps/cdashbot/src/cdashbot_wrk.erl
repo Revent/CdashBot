@@ -109,7 +109,11 @@ end;
 process_message("project" = Message, To, State) ->
 	{ok, {_, _, Body}} = httpc:request(?URL ++ ?API_LIST),
 	io:format("You received: ~s: ~s~n", [To, Message]), 
-	List = [ erlang:binary_to_list(X) || X <- proplists:get_all_values(<<"name">>, lists:append(jsx:decode(erlang:list_to_binary(Body))))],
+	case string:equal(?PLIST, "all")  of
+		true -> List = [ erlang:binary_to_list(X) || X <- proplists:get_all_values(<<"name">>, 
+			lists:append(jsx:decode(erlang:list_to_binary(Body))))];
+		false -> List = [?PLIST]
+	end,
 	case string:tokens(To, "/")  of
 		[Conf, Nick] ->
 			exmpp_session:send_packet(State#state.session,
@@ -140,8 +144,12 @@ Filt = fun(X) ->
 		nomatch =/= re:run(X, Rexpc, [global])
 		end, 
 io:format("You received: ~s: ~s ~s~n", [To, Message, Rexp]), 
-	List = [ erlang:binary_to_list(X) || X <- proplists:el (<<"name">>, lists:append(jsx:decode(erlang:list_to_binary(Body))))],
-	case string:tokens(To, "/")  of
+case string:equal(?PLIST, "all")  of
+		true -> List = [ erlang:binary_to_list(X) || X <- proplists:get_all_values(<<"name">>, 
+			lists:append(jsx:decode(erlang:list_to_binary(Body))))];
+		false -> List = [?PLIST]
+	end,
+case string:tokens(To, "/")  of
 		[Conf, Nick] ->
 			exmpp_session:send_packet(State#state.session,
 			 	exmpp_stanza:set_recipient(exmpp_message:groupchat(Nick ++ ": " ++ string:join(lists:filter(Filt, List), ", ")),
@@ -207,5 +215,4 @@ summ_gen(Build, Rexp) ->
 		lists:append(proplists:get_all_values(Build, ErlJson)))),
 	Tests = string:join([erlang:binary_to_list(X) || X <- proplists:get_all_values(<<"name">>, lists:append(proplists:get_value(<<"tests">>,
 		lists:append(proplists:get_all_values(Build, ErlJson)))))], ", "),
-	Url = ?SUMM ++ erlang:binary_to_list(Build), 
-	io_lib:format("~s on ~s, Failed tests: ~s(~s)~n", [Name, BuildName, Tests, Url]). 
+	io_lib:format("~s on ~s, Failed tests: ~s~n", [Name, BuildName, Tests]). 
