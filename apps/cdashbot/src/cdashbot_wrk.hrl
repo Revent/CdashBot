@@ -1,7 +1,7 @@
 -define(URL, cdashbot_wrk:get_value(cdash_url, cdash)).
 -define(USER, cdashbot_wrk:get_value(cdash_user, cdash)).
 -define(PASS, cdashbot_wrk:get_value(cdash_password, cdash)).
--define(PLIST, cdashbot_wrk:get_value(projects_list, cdash)).
+-define(PLIST, cdashbot_wrk:get_value(projects_listel, cdash)).
 -define(NOTIFY, cdashbot_wrk:get_value(notify_strategy, cdash)).
 -define(API_LIST, "/api/?method=project&task=list").
 -define(API_SUMM, "/api/?method=build&task=sitetestfailures&project=").
