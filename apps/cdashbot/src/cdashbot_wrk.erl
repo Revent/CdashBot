@@ -110,68 +110,86 @@ process_message("project" = Message, To, State) ->
 	{ok, {_, _, Body}} = httpc:request(?URL ++ ?API_LIST),
 	io:format("You received: ~s: ~s~n", [To, Message]), 
 	case string:equal(?PLIST, "all")  of
-		true -> List = [ erlang:binary_to_list(X) || X <- proplists:get_all_values(<<"name">>, 
-			lists:append(jsx:decode(erlang:list_to_binary(Body))))];
+		true -> List = api_module:list_gen(Body); 
 		false -> List = [?PLIST]
 	end,
 	case string:tokens(To, "/")  of
-		[Conf, Nick] ->
+		[Conf, _] ->
 			exmpp_session:send_packet(State#state.session,
-			 	exmpp_stanza:set_recipient(exmpp_message:groupchat(Nick ++ ": " ++ string:join(List, ", ")),
-			 		 Conf)); 
-	_ ->
-		ok
-end;
+				exmpp_stanza:set_recipient(exmpp_message:groupchat(List),
+					 Conf)); 
+		_ ->
+			ok
+	end;
+	
+
 process_message("help" = Message, To, State) ->
 	{ok, Help} = ?HELP,
 	io:format("You received: ~s: ~s~n", [To, Message]),
 	case string:tokens(To, "/")  of
-		[Conf, Nick] ->
+		[Conf, _] ->
 			exmpp_session:send_packet(State#state.session,
 			 	exmpp_stanza:set_recipient(exmpp_message:groupchat(Help), Conf));
 		_ -> 
 			ok
 	end;
 
+process_message("version" = Message, To, State) ->
+io:format("You received: ~s: ~s~n", [To, Message]),
+	case string:tokens(To, "/") of 
+		[Conf, _] ->
+			exmpp_session:send_packet(State#state.session,
+				exmpp_stanza:set_recipient(exmpp_message:groupchat(api_module:ver_gen()),
+				 Conf));
+		_ ->
+			ok 
+	end; 
 
-process_message(_Message, _To, _State) -> 
-	ok.
+process_message(_, To, State) ->
+	case string:tokens(To, "/") of 
+		[Conf, Nick] -> 
+			exmpp_session:send_packet(State#state.session, 
+				exmpp_stanza:set_recipient(exmpp_message:groupchat(Nick ++ ": Чего?"),
+				 Conf));
+		_ ->
+			ok 
+	end.
 
 process_message("project" = Message, Rexp, To, State) ->
 {ok, {_, _, Body}} = httpc:request(?URL ++ ?API_LIST),
-{ok, Rexpc} = re:compile(Rexp, [unicode, caseless]), 
-Filt = fun(X) ->
-		nomatch =/= re:run(X, Rexpc, [global])
-		end, 
 io:format("You received: ~s: ~s ~s~n", [To, Message, Rexp]), 
 case string:equal(?PLIST, "all")  of
-		true -> List = [ erlang:binary_to_list(X) || X <- proplists:get_all_values(<<"name">>, 
-			lists:append(jsx:decode(erlang:list_to_binary(Body))))];
+		true -> List = api_module:list_gen_rexp(Body, Rexp); 
 		false -> List = [?PLIST]
 	end,
 case string:tokens(To, "/")  of
-		[Conf, Nick] ->
+		[Conf, _] ->
 			exmpp_session:send_packet(State#state.session,
-			 	exmpp_stanza:set_recipient(exmpp_message:groupchat(Nick ++ ": " ++ string:join(lists:filter(Filt, List), ", ")),
+			 	exmpp_stanza:set_recipient(exmpp_message:groupchat(List),
 			 		 Conf));
 		_ ->
 		ok
 	end;
 process_message("summary" = Message, Rexp, To, State) ->
-	{ok, {_, _, Body}} = httpc:request(?URL ++ ?API_SUMM ++ Rexp),
 	io:format("You received: ~s: ~s ~s~n", [To, Message, Rexp]),
-	Builds = proplists:get_keys(jsx:decode(erlang:list_to_binary(Body))),
-	List = lists:map(fun(X) -> summ_gen(X, Rexp) end, Builds), 
 	case string:tokens(To, "/")  of
-		[Conf, Nick] ->
+		[Conf, _] ->
 			exmpp_session:send_packet(State#state.session,
-			 	exmpp_stanza:set_recipient(exmpp_message:groupchat(Nick ++ ": " ++ List),
+			 	exmpp_stanza:set_recipient(exmpp_message:groupchat(api_module:check_active(Rexp)),
 			 		 Conf));
 		_ ->
-		ok
+			ok
 	end;
-process_message(_Message, _Rexp, _To, _State) -> 
-	ok.
+
+process_message(_, _, To, State) ->
+	case string:tokens(To, "/") of 
+		[Conf, Nick] -> 
+			exmpp_session:send_packet(State#state.session, 
+				exmpp_stanza:set_recipient(exmpp_message:groupchat(Nick ++ ": Чего?"),
+				 Conf));
+		_ ->
+			ok 
+	end.
 
 get_value(Key, Section) ->
 	{ok, Conf} = zucchini:parse_file(?CONF),
@@ -206,13 +224,4 @@ process_received_packet(#state{name=Name} = State, #received_packet{packet_type=
 process_received_packet(_State, _Packet) ->
 	ok.
 
-summ_gen(Build, Rexp) ->
-	{ok, {_, _, Body}} = httpc:request(?URL ++ ?API_SUMM ++ Rexp),
-	ErlJson = jsx:decode(erlang:list_to_binary(Body)),
-	Name = erlang:binary_to_list(proplists:get_value(<<"name">>, 
-		lists:append(proplists:get_all_values(Build, ErlJson)))),
-	BuildName = erlang:binary_to_list(proplists:get_value(<<"buildname">>,
-		lists:append(proplists:get_all_values(Build, ErlJson)))),
-	Tests = string:join([erlang:binary_to_list(X) || X <- proplists:get_all_values(<<"name">>, lists:append(proplists:get_value(<<"tests">>,
-		lists:append(proplists:get_all_values(Build, ErlJson)))))], ", "),
-	io_lib:format("~s on ~s, Failed tests: ~s~n", [Name, BuildName, Tests]). 
+ 

@@ -13,6 +13,7 @@ start() ->
 	application:start(inets),
 	application:start(exmpp),
 	application:start(cdashbot),
+	application:start(api_module), 
 	ok.
 
 start(_StartType, _StartArgs) ->
