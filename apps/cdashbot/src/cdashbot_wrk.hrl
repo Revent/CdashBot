@@ -14,7 +14,7 @@
 -define(CONF, os:getenv("HOME")  ++ "/.config/cdashbot/cbotrc").
 -define(CONT, cdashbot_wrk:get_value(xmpp_cont, xmpp)).
 -define(SUMM, "http://open.cdash.org/buildSummary.php?buildid=").
--define(VER, "/api/getversion.php").
+-define(API_VER, "/api/?method=cdash&task=version").
 -define(API_BL, "/api/?method=build&task=list&project=").
 -define(API_DI, "/api/?method=build&task=describe&id=").
 -define(API_CN, "&count=1").

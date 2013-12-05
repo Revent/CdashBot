@@ -13,8 +13,8 @@ list_gen(Jlist) ->
 			List = [erlang:binary_to_list(X) || X <- proplists:get_all_values(<<"name">>, 
 			lists:append(proplists:get_value(<<"projects">>, jsx:decode(erlang:list_to_binary(Jlist)))))],
 			string:join(lists:map(fun(X) -> describe_gen(X) end, List), ""); 
-
-		_ -> "Error: " ++ proplists:get_value(<<"message">>, jsx:decode(erlang:list_to_binary(Jlist)))
+		_ -> 
+			error_text(Jlist)
 	end.
 
 %% Проверяем и генерируем список проектов согласно Regexp.
@@ -30,7 +30,7 @@ list_gen_rexp(Jlist, Rexp) ->
 			lists:append(proplists:get_value(<<"projects">>, jsx:decode(erlang:list_to_binary(Jlist)))))]),
 			string:join(lists:map(fun(X) -> describe_gen(X) end, List), "");
 		_ -> 
-			"Error: " ++ proplists:get_value(<<"message">>, jsx:decode(erlang:list_to_binary(Jlist)))
+			error_text(Jlist)
 	end.	
 
 check_active(Rexp) -> 
@@ -53,13 +53,20 @@ check_active(Rexp) ->
 				_ -> inactive(Id, Count) 
 					
 			end;
-		_ -> "Error: " ++ proplists:get_value(<<"message">>, jsx:decode(erlang:list_to_binary(Body)))
+		_ -> 
+			error_text(Body)
 	end.
 
 %% Генерируем строку версии 
 ver_gen() ->
-	{ok, {_, _, Body}} = httpc:request(?URL ++ ?VER),
-	io_lib:format("Cdash version: ~s~n", [Body]).
+	{ok, {_, _, Body}} = httpc:request(?URL ++ ?API_VER),
+	case check_status(Body) of 
+		true -> 
+			List = erlang:binary_to_list(proplists:get_value(<<"version">>, jsx:decode(erlang:list_to_binary(Body)))), 
+			io_lib:format("Cdash version: ~s~n", [List]);
+		_ -> 
+			error_text(Body)
+	end.
 
 %%----------------------------------------------------------------------------------------------
 %% Internal Function
@@ -99,7 +106,8 @@ inactive(Id, Count) ->
       									 erlang:integer_to_list(Testp),
       									 erlang:integer_to_list(Tests)]) 
 			end;
-		_ -> "Error: " ++ proplists:get_value(<<"message">>, jsx:decode(erlang:list_to_binary(Body)))
+		_ -> 
+			error_text(Body)
 	end.
 
 active(Rexp) ->
@@ -115,5 +123,9 @@ describe_gen(Name) ->
 			DescP = proplists:get_value(<<"description">>, List),
 			io_lib:format("~s - ~s. ~n", [NamP, DescP]);
 		_ ->    
-			"Error: " ++ proplists:get_value(<<"message">>, jsx:decode(erlang:list_to_binary(Body)))
+			error_text(Body)
 	end.
+error_text(Body) ->
+	ErrText = proplists:get_value(<<"message">>, jsx:decode(erlang:list_to_binary(Body))),
+	io_lib:format("Error: ~s", ErrText).
+	
