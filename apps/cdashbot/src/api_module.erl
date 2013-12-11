@@ -118,7 +118,7 @@ describe_gen(Name) ->
 	{ok, {_, _, Body}} = httpc:request(?URL ++ ?API_DESC ++ Name),
 	case check_status(Body) of 
 		true -> 
-			List = jsx:decode(erlang:list_to_binary(Body)),
+			List = lists:append(proplists:get_value(<<"projects">>, jsx:decode(erlang:list_to_binary(Body)))),
 			NamP = proplists:get_value(<<"name">>, List),
 			DescP = proplists:get_value(<<"description">>, List),
 			io_lib:format("~s - ~s. ~n", [NamP, DescP]);
@@ -128,4 +128,3 @@ describe_gen(Name) ->
 error_text(Body) ->
 	ErrText = proplists:get_value(<<"message">>, jsx:decode(erlang:list_to_binary(Body))),
 	io_lib:format("Error: ~s", ErrText).
-	
