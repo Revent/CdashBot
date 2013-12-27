@@ -1,7 +1,6 @@
 -module(api_module).
--export([list_gen/1, list_gen_rexp/2, check_active/1, ver_gen/0]).
+-export([list_gen/1, list_gen_rexp/2, check_active/1, ver_gen/0, count_builds/1,count_builds_week/1]).
 -include_lib("cdashbot_wrk.hrl").
-
 %%----------------------------------------------------------------------------------------------
 %% Exported Function
 %%----------------------------------------------------------------------------------------------
@@ -81,9 +80,9 @@ inactive(Id, Count) ->
 	{ok, {_, _, Body}} = httpc:request(?URL ++ ?API_DI ++ Id),
 	case check_status(Body) of 
 		true -> 
-			List = jsx:decode(erlang:list_to_binary(Body)),
+			List = lists:append(proplists:get_value(<<"builds">>, jsx:decode(erlang:list_to_binary(Body)))),
 			Err = proplists:get_value(<<"n_errors">>, List),
-			Name = proplists:get_value(<<"name">>, List),
+			Name = proplists:get_value(<<"project">>, List),
 			Bname = proplists:get_value(<<"name">>, List),
 			Sname = proplists:get_value(<<"site">>, List),
 			Warn = proplists:get_value(<<"n_warnings">>, List),
@@ -92,13 +91,13 @@ inactive(Id, Count) ->
 			Testn = proplists:get_value(<<"n_test_not_run">>, List),
 			Tests = Testp + Testf + Testn,
 			case  Err > 0 of
-				true -> io_lib:format("Project ~s is inactive (no builds for more than ~s)~n Last build is ~s on ~s.~n Build errors: ~s, warnings: ~s", 
+				true -> io_lib:format("Project ~s is inactive (no builds for more than ~s days):~n Last build is ~s on ~s. Build errors: ~s, warnings: ~s~n",
       												[Name, 
       												erlang:integer_to_list(Count),
       												 Bname, Sname, 
       												 erlang:integer_to_list(Err), 
       												 erlang:integer_to_list(Warn)]);  
-				_ ->  io_lib:format("Project ~s is inactive (no builds for more than ~s)~n Last build is ~s on ~s.~n Build warnings: ~s.~n Tests passed: ~s/~s", 
+				_ ->  io_lib:format("Project ~s is inactive (no builds for more than ~s days):~n Last build is ~s on ~s. Build warnings: ~s. Tests passed: ~s/~s~n", 
       									[Name, 
       									erlang:integer_to_list(Count),
       									 Bname, Sname, 
@@ -111,9 +110,21 @@ inactive(Id, Count) ->
 	end.
 
 active(Rexp) ->
-	 io_lib:format("~s active", [Rexp]).
+	Count = count_builds(Rexp),
+	case  Count =< 2 of
+		true -> 
+			active10(Rexp);
+		false -> 	
+			string:join([io_lib:format("~s builds for project ~s last 3 days ~n", 
+										[erlang:integer_to_list(Count),
+										Rexp]) ++ lists:concat(builds_select(Rexp, 2))], "")
+	end.
+	
 active10(Rexp) ->
-	io_lib:format("~s 10 Last", [Rexp]).
+	Count = count_builds_week(Rexp),
+	io_lib:format("~s builds for project ~s last week ~n", 
+						[erlang:integer_to_list(Count),
+						 Rexp]) ++ lists:concat(builds_select(Rexp, 6)).
 describe_gen(Name) -> 
 	{ok, {_, _, Body}} = httpc:request(?URL ++ ?API_DESC ++ Name),
 	case check_status(Body) of 
@@ -125,6 +136,62 @@ describe_gen(Name) ->
 		_ ->    
 			error_text(Body)
 	end.
+describe_gen_id(Id) ->
+	{ok, {_, _, Body}} = httpc:request(?URL ++ ?API_DI ++ erlang:integer_to_list(Id)),
+	case check_status(Body) of 
+		true -> 
+			List = lists:append(proplists:get_value(<<"builds">>, jsx:decode(erlang:list_to_binary(Body)))),
+%			Err = proplists:get_value(<<"n_errors">>, List),
+%			Warn = proplists:get_value(<<"n_warnings">>, List),
+			TestP = proplists:get_value(<<"n_test_pass">>, List),
+			TestF = proplists:get_value(<<"n_test_fail">>, List),
+			TestN = proplists:get_value(<<"n_test_not_run">>, List),
+			Site = proplists:get_value(<<"site">>, List),
+			Name = proplists:get_value(<<"name">>, List),
+			TestS = TestP + TestF + TestN,
+			io_lib:format("Last build on ~s: ~s. Tests passed: ~s/~s ~n", 
+															[erlang:binary_to_list(Site),
+															erlang:binary_to_list(Name),
+															erlang:integer_to_list(TestP),
+															erlang:integer_to_list(TestS)]);
+		_ -> error_text(Body)
+	end.
+
 error_text(Body) ->
 	ErrText = proplists:get_value(<<"message">>, jsx:decode(erlang:list_to_binary(Body))),
 	io_lib:format("Error: ~s", ErrText).
+count_builds(Rexp) -> 
+	{ok, {_, _, Body}} = httpc:request(?URL ++ ?API_BL ++ Rexp ++ ?API_DN ++ day_range(2)),
+	erlang:length(proplists:get_all_values(<<"id">>, 
+		lists:append(proplists:get_value(<<"builds">>, jsx:decode(erlang:list_to_binary(Body)))))).
+
+count_builds_week(Rexp) ->  
+	{ok, {_, _, Body}} = httpc:request(?URL ++ ?API_BL ++ Rexp ++ ?API_DN ++ day_range(6)),
+	erlang:length(proplists:get_all_values(<<"id">>, 
+		lists:append(proplists:get_value(<<"builds">>, jsx:decode(erlang:list_to_binary(Body)))))).
+
+day_range(Count) -> 
+	StringToday = string:join(io_lib:format("~w~w~w", erlang:tuple_to_list(erlang:date())), "-"),
+	ThreeDay = string:join(io_lib:format("~w~w~w", erlang:tuple_to_list(
+							calendar:gregorian_days_to_date((
+								calendar:date_to_gregorian_days(erlang:date()) - Count)))), "-"),
+	string:join([ThreeDay, StringToday], ",").
+
+builds_select(Rexp, Count) ->
+	{ok, {_, _, Body}} = httpc:request(?URL ++ ?API_BL ++ Rexp ++ ?API_DN ++ day_range(Count)),
+	case check_status(Body) of 
+		true ->
+			Jlist = jsx:decode(erlang:list_to_binary(Body)),
+			List = lists:append(proplists:get_value(<<"builds">>, Jlist)),
+			Id = proplists:get_all_values(<<"id">>, List),
+			Name = proplists:get_all_values(<<"name">>, List),
+			Site = proplists:get_all_values(<<"site">>, List),
+			Zlist = lists:zip(Name, lists:zip(Site, Id)),
+			Blist = lists:map(fun(Y) -> 
+				lists:map(fun(X) -> 
+					proplists:get_value(X, proplists:get_all_values(Y, Zlist)) end, 
+						lists:usort(Site)) end, 
+							lists:usort(Name)),
+			lists:map(fun(X) -> describe_gen_id(X) end, lists:append(Blist));
+		_ -> error_text(Body)
+	end.

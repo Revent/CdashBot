@@ -16,7 +16,7 @@
 -define(SUMM, "http://open.cdash.org/buildSummary.php?buildid=").
 -define(API_VER, "/api/?method=cdash&task=version").
 -define(API_BL, "/api/?method=build&task=list&project=").
--define(API_DI, "/api/?method=build&task=describe&id=").
+-define(API_DI, "/api/?method=build&task=describe&bid=").
 -define(API_CN, "&count=1").
 -define(API_DL, "/api/?method=build&task=list&project=").
 -define(API_DN, "&date=").
