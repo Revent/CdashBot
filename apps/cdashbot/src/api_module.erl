@@ -1,20 +1,36 @@
 -module(api_module).
--export([list_gen/1, list_gen_rexp/2, check_active/1, ver_gen/0, count_builds/1,count_builds_week/1]).
+-export([list_gen/0, list_gen_rexp/2, check_active/1, ver_gen/0, count_builds/1,count_builds_week/1, list_string_gen/0]).
 -include_lib("cdashbot_wrk.hrl").
 %%----------------------------------------------------------------------------------------------
 %% Exported Function
 %%----------------------------------------------------------------------------------------------
-%% Проверяем и генерируем списо проектов.
+%% Проверяем и генерируем список проектов.
 
-list_gen(Jlist) ->
-	case check_status(Jlist) of 
+list_gen() ->
+	case string:equal(?PLIST, "all")  of
 		true -> 
-			List = [erlang:binary_to_list(X) || X <- proplists:get_all_values(<<"name">>, 
-			lists:append(proplists:get_value(<<"projects">>, jsx:decode(erlang:list_to_binary(Jlist)))))],
-			string:join(lists:map(fun(X) -> describe_gen(X) end, List), ""); 
-		_ -> 
-			error_text(Jlist)
+			{ok, {_, _, Body}} = httpc:request(?URL ++ ?API_LIST),
+			case check_status(Body) of 
+				true -> 
+						[erlang:binary_to_list(X) || X <- proplists:get_all_values(<<"name">>, 
+						lists:append(proplists:get_value(<<"projects">>, jsx:decode(erlang:list_to_binary(Body)))))];
+				_ -> 
+					error_text(Body)
+			end;
+		false -> [?PLIST]
 	end.
+
+%% Генерируем строку сообщения	
+list_string_gen() -> 
+	{ok, {_, _, Body}} = httpc:request(?URL ++ ?API_LIST),
+	case check_status(Body) of
+		true ->
+			string:join(lists:map(fun(X) -> describe_gen(X) end, list_gen()), " "); 
+
+		_ ->
+			error_text(Body)
+	end.
+	
 
 %% Проверяем и генерируем список проектов согласно Regexp.
 

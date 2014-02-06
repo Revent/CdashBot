@@ -107,16 +107,11 @@ process_message("ping" = Message, To, State) ->
 end;
 
 process_message("project" = Message, To, State) ->
-	{ok, {_, _, Body}} = httpc:request(?URL ++ ?API_LIST),
 	io:format("You received: ~s: ~s~n", [To, Message]), 
-	case string:equal(?PLIST, "all")  of
-		true -> List = api_module:list_gen(Body); 
-		false -> List = [?PLIST]
-	end,
 	case string:tokens(To, "/")  of
 		[Conf, _] ->
 			exmpp_session:send_packet(State#state.session,
-				exmpp_stanza:set_recipient(exmpp_message:groupchat(List),
+				exmpp_stanza:set_recipient(exmpp_message:groupchat(api_module:list_string_gen()),
 					 Conf)); 
 		_ ->
 			ok
@@ -204,24 +199,24 @@ process_received_packet(#state{name=Name} = State, #received_packet{packet_type=
     	1 -> 
     		case string:tokens(Message, " ") of
     			[Msg] ->
-    				case string:str(Msg, ?CONT) of
-    					1 -> process_message(string:sub_string(Msg, 2), erlang:binary_to_list(From), State)
-    				end;
+    				process_message(string:sub_string(Msg, 2), erlang:binary_to_list(From), State);
     			[Msg, Rexp] ->
-    				case string:str(Msg, ?CONT) of
-    					1 -> process_message(string:sub_string(Msg, 2), Rexp, erlang:binary_to_list(From), State)
-    				end
+    				process_message(string:sub_string(Msg, 2), Rexp, erlang:binary_to_list(From), State);
+    			_ -> 
+    				ok
     		end;
     	0 ->
     		case string:tokens(Message, " ") of
-			[Name, Msg] -> process_message(Msg, erlang:binary_to_list(From), State); 
-			[Name, Msg, Rexp] -> process_message(Msg, Rexp, erlang:binary_to_list(From), State);
-			_ -> ok
+				[Name, Msg] -> 
+					process_message(Msg, erlang:binary_to_list(From), State); 
+				[Name, Msg, Rexp] -> 
+					process_message(Msg, Rexp, erlang:binary_to_list(From), State);
+				_ -> 
+					ok
 			end;
 		_ -> ok
 	end;
 
 process_received_packet(_State, _Packet) ->
 	ok.
-
  
