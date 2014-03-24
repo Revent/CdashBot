@@ -12,6 +12,7 @@
 start() ->
 	application:start(inets),
 	application:start(exmpp),
+	application:start(lager), 
 	application:start(cdashbot),
 	application:start(api_module), 
 	ok.
