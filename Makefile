@@ -15,7 +15,7 @@ ifeq ($(REBAR),)
 $(error "Rebar not available on this system")
 endif
 
-.PHONY: all compile  clean distclean update-deps rebuild
+.PHONY: all compile  clean distclean deps update-deps compile rebuild
 
 all: deps compile 
 
