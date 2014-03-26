@@ -69,18 +69,16 @@ diff_project_id(Project) ->
     NewList = proplists:get_value(Project, [NewTuple]),
     List = proplists:get_value(Project, ets:lookup(build, Project)),
     
-    case sum(NewList -- List) of 
-        0 -> ok;
-        _ -> cdashbot_wrk:send(lists:foreach(fun(X) -> api_module:describe_gen_id(erlang:list_to_integer(X)) end,
-                                  NewList -- List)),
+    case NewList -- List =/= [] of 
+        false -> ok;
+        true -> lists:foreach(fun(X) -> 
+                            cdashbot_wrk:send(api_module:describe_gen_id(erlang:list_to_integer(X))) end,
+                                  NewList -- List),
             ets:insert(build, NewTuple)  
     end.
 
 
 
 
-sum(List) -> sum(List, 0).
-sum([H|T], Sum) -> sum(T, Sum + H);
-sum([], Sum) -> Sum.
     
 
