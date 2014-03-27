@@ -64,7 +64,7 @@ list_gen_rexp(Jlist, Rexp) ->
 		_ -> 
 			error_text(Jlist)
 	end.	
-
+%%  Проверяем проект на активность.
 check_active(Rexp) -> 
 	{ok, {_, _, Body}} = httpc:request(?URL ++ ?API_BL ++ Rexp ++ ?API_CN),
 	case check_status(Body) of 
@@ -114,34 +114,14 @@ inactive(Id, Count) ->
 	case check_status(Body) of 
 		true -> 
 			List = lists:append(proplists:get_value(<<"builds">>, jsonx:decode(erlang:list_to_binary(Body),  [{format, proplist}]))),
-			Err = proplists:get_value(<<"n_errors">>, List),
 			Name = proplists:get_value(<<"project">>, List),
-			Bname = proplists:get_value(<<"name">>, List),
-			Sname = proplists:get_value(<<"site">>, List),
-			Warn = proplists:get_value(<<"n_warnings">>, List),
-			Testp = proplists:get_value(<<"n_test_pass">>, List),
-			Testf = proplists:get_value(<<"n_test_fail">>, List),
-			Testn = proplists:get_value(<<"n_test_not_run">>, List),
-			Tests = Testp + Testf + Testn,
-			case  Err > 0 of
-				true -> io_lib:format("Project ~s is inactive (no builds for more than ~s days):~n Last build is ~s on ~s. Build errors: ~s, warnings: ~s~n",
-      												[Name, 
-      												erlang:integer_to_list(Count),
-      												 Bname, Sname, 
-      												 erlang:integer_to_list(Err), 
-      												 erlang:integer_to_list(Warn)]);  
-				_ ->  io_lib:format("Project ~s is inactive (no builds for more than ~s days):~n Last build is ~s on ~s. Build warnings: ~s. Tests passed: ~s/~s~n", 
-      									[Name, 
-      									erlang:integer_to_list(Count),
-      									 Bname, Sname, 
-      									 erlang:integer_to_list(Warn),
-      									 erlang:integer_to_list(Testp),
-      									 erlang:integer_to_list(Tests)]) 
-			end;
+			io_lib:format("Project ~s is inactive (no builds for more than ~s days)",
+      												[Name, erlang:integer_to_list(Count)]),
+			describe_gen_id(erlang:list_to_integer(Id));
 		_ -> 
 			error_text(Body)
 	end.
-
+%% Считаем количество сборок за неделю у активного проекта и генерируем сообщение в зависимости от количества
 active(Rexp) ->
 	Count = count_builds(Rexp),
 	case  Count =< 2 of
@@ -152,12 +132,13 @@ active(Rexp) ->
 										[erlang:integer_to_list(Count),
 										Rexp]) ++ lists:concat(builds_select(Rexp, 2))], "")
 	end.
-	
+
 active10(Rexp) ->
 	Count = count_builds_week(Rexp),
 	io_lib:format("~s builds for project ~s last week ~n", 
 						[erlang:integer_to_list(Count),
 						 Rexp]) ++ lists:concat(builds_select(Rexp, 6)).
+%% Генерируем описание проекта
 describe_gen(Name) -> 
 	{ok, {_, _, Body}} = httpc:request(?URL ++ ?API_DESC ++ Name),
 	case check_status(Body) of 
@@ -169,27 +150,48 @@ describe_gen(Name) ->
 		_ ->    
 			error_text(Body)
 	end.
+%%Генерируем суммари  по проекту.
 describe_gen_id(Id) ->
 	{ok, {_, _, Body}} = httpc:request(?URL ++ ?API_DI ++ erlang:integer_to_list(Id)),
 	case check_status(Body) of 
 		true -> 
 			List = lists:append(proplists:get_value(<<"builds">>, jsonx:decode(erlang:list_to_binary(Body),  [{format, proplist}]))),
-%			Err = proplists:get_value(<<"n_errors">>, List),
-%			Warn = proplists:get_value(<<"n_warnings">>, List),
+			Err = proplists:get_value(<<"n_errors">>, List),
+			Warn = proplists:get_value(<<"n_warnings">>, List),
 			TestP = proplists:get_value(<<"n_test_pass">>, List),
 			TestF = proplists:get_value(<<"n_test_fail">>, List),
 			TestN = proplists:get_value(<<"n_test_not_run">>, List),
 			Site = proplists:get_value(<<"site">>, List),
 			Name = proplists:get_value(<<"name">>, List),
 			TestS = TestP + TestF + TestN,
-			io_lib:format("Last build on ~s: ~s. Tests passed: ~s/~s ~n", 
-															[erlang:binary_to_list(Site),
-															erlang:binary_to_list(Name),
-															erlang:integer_to_list(TestP),
-															erlang:integer_to_list(TestS)]);
+			case {Err, Warn, TestS} of 
+				{0, Warn, TestS} when Warn > 0, TestS > 0 -> 
+					io_lib:format("Last build on ~s: ~s. Warnings: ~s. Tests complited: ~s/~s.~n",
+																					[Site, 
+						 															 Name,
+						 									 erlang:integer_to_list(Warn),
+						 									erlang:integer_to_list(TestP),
+						 								  erlang:integer_to_list(TestS)]);
+				{0, 0, TestS} when TestS > 0 ->   io_lib:format("Last build on ~s: ~s. Tests complited: ~s/~s.~n",
+																					[Site, 
+						 															 Name,
+						 									erlang:integer_to_list(TestP),
+						 								  erlang:integer_to_list(TestS)]);
+				{0, Warn, 0} when Warn > 0 ->	io_lib:format("Last build on ~s: ~s. Warnings: ~s.~n", 
+																					[Site, 
+						 															 Name,
+						 								   erlang:integer_to_list(Warn)]);
+				{Err, _, _} when Err > 0 -> io_lib:format("Last build on ~s: ~s, failed. Errors: ~s.~n", 
+																					[Site, 
+						 															 Name,
+						 									erlang:integer_to_list(Err)]);
+				{0, 0, 0} -> io_lib:format("Last build on ~s: ~s. All good.~n",
+																					[Site, 
+																					Name]) 
+			end;
 		_ -> error_text(Body)
 	end.
-
+%% Генерация ошибку и Json
 error_text(Body) ->
 			ErrText = proplists:get_value(<<"message">>, jsonx:decode(erlang:list_to_binary(Body),  [{format, proplist}])),
 			io_lib:format("Error: ~s", ErrText).

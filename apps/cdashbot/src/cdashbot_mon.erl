@@ -32,7 +32,7 @@ start_link() ->
 %% ------------------------------------------------------------------
 
 init([]) ->
-	ets:new(build, [named_table, bag]),
+	ets:new(build, [named_table]),
 	check_last_build(),
     Timer = erlang:send_after(5000, ?MODULE, project_loop),
 	{ok, Timer}.
@@ -46,7 +46,7 @@ handle_cast(_Msg, State) ->
 handle_info(project_loop, OldTimer) -> 
    erlang:cancel_timer(OldTimer),
    lists:foreach(fun(X) -> diff_project_id(X) end, api_module:list_gen()),
-   Timer = erlang:send_after(5000, ?MODULE, project_loop),
+   Timer = erlang:send_after(20000, ?MODULE, project_loop),
    {noreply, Timer}; 
 
 handle_info(_Info, State) ->
@@ -71,10 +71,11 @@ diff_project_id(Project) ->
     
     case NewList -- List =/= [] of 
         false -> ok;
-        true -> lists:foreach(fun(X) -> 
+        true -> lager:info("New build: ~s", NewList -- List),
+            lists:foreach(fun(X) -> 
                             cdashbot_wrk:send(api_module:describe_gen_id(erlang:list_to_integer(X))) end,
                                   NewList -- List),
-            ets:insert(build, NewTuple)  
+            ets:insert(build, NewTuple) 
     end.
 
 

@@ -187,7 +187,6 @@ process_received_packet(_State, _Packet) ->
 	ok.
 
 process_send_packet(Message, State) ->
-	%lager:debug("~w", [Message]),
 	exmpp_session:send_packet(State#state.session,
 				exmpp_stanza:set_recipient(exmpp_message:groupchat(Message), 
 					?ROOM)).
@@ -200,5 +199,4 @@ process_create_message(Body) ->
 				exmpp_message:chat(Body), <<"from">>, From), <<"to">>, ?ROOM), <<"type">>, <<"groupchat">>). 
 
 send_packet(Session, Message) ->
-	lager:info("~p", [Message]),
 	exmpp_session:send_packet(Session, process_create_message(Message)). 
