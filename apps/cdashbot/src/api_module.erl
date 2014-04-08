@@ -106,9 +106,19 @@ ver_gen() ->
 
 %% Проверяем статус в Json
 check_status(Url) ->
-			 {ok, {_, _, Body}} = httpc:request(Url),
-				Status = proplists:get_value(<<"status">>, jsonx:decode(erlang:list_to_binary(Body),  [{format, proplist}])),
-				[Status, Body].
+			try httpc:request(Url) of
+				{ok, {_, _, Body}} ->
+					Status = proplists:get_value(<<"status">>, jsonx:decode(erlang:list_to_binary(Body),  [{format, proplist}])),
+					[Status, Body];
+				{error,_} ->
+					lager:info("Server no avilable"),
+					check_status(Url)
+			catch 
+				_:_ -> 
+					lager:info("Server no avilable"),
+					check_status(Url)
+			end.
+
 
 inactive(Id, Count) ->
 	Url = ?URL ++ ?API_DI ++ Id,
@@ -131,14 +141,14 @@ active(Rexp) ->
 		false -> 	
 			string:join([io_lib:format("~s builds for project ~s last 3 days ~n", 
 										[erlang:integer_to_list(Count),
-										Rexp]) ++ lists:concat(builds_select(Rexp, 2))], "")
+										Rexp]) ++ lists:concat(builds_select(Rexp, 3))], "")
 	end.
 
 active10(Rexp) ->
 	Count = count_builds_week(Rexp),
 	io_lib:format("~s builds for project ~s last week ~n", 
 						[erlang:integer_to_list(Count),
-						 Rexp]) ++ lists:concat(builds_select(Rexp, 6)).
+						 Rexp]) ++ lists:concat(builds_select(Rexp, 7)).
 %% Генерируем описание проекта
 describe_gen(Name) -> 
 	Url = ?URL ++ ?API_DESC ++ Name,
@@ -203,7 +213,7 @@ error_text(Body) ->
 			io_lib:format("Error: ~s", ErrText).
 
 count_builds(Rexp) -> 
-	Url = ?URL ++ ?API_BL ++ Rexp ++ ?API_DN ++ day_range(2),
+	Url = ?URL ++ ?API_BL ++ Rexp ++ ?API_DN ++ day_range(3),
 	case check_status(Url) of
 		[true, Body] ->
 			erlang:length(proplists:get_all_values(<<"id">>, 
@@ -213,7 +223,7 @@ count_builds(Rexp) ->
 	end.
 
 count_builds_week(Rexp) ->  
-	Url = ?URL ++ ?API_BL ++ Rexp ++ ?API_DN ++ day_range(6),
+	Url = ?URL ++ ?API_BL ++ Rexp ++ ?API_DN ++ day_range(7),
 	case check_status(Url) of 
 		[true, Body] ->
 			erlang:length(proplists:get_all_values(<<"id">>, 
@@ -247,4 +257,3 @@ builds_select(Rexp, Count) ->
 			lists:map(fun(X) -> describe_gen_id(X) end, lists:append(Blist));
 		[_, Body] -> error_text(Body)
 	end.
-	
