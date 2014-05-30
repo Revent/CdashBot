@@ -2,8 +2,8 @@
              [{description,"cdashbot"},
               {vsn,"0.1"},
               {registered,[]},
-              {applications,[kernel,inets,stdlib,exmpp,zucchini]},
+              {applications,[kernel,inets,stdlib,exmpp]},
               {mod,{cdashbot_app,[]}},
               {env,[]},
               {modules,[api_module,cdashbot_api,cdashbot_app,cdashbot_mon,
-                        cdashbot_sup,cdashbot_wrk]}]}.
+                        cdashbot_sup,cdashbot_wrk,config]}]}.

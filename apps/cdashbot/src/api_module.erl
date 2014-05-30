@@ -1,5 +1,8 @@
 -module(api_module).
--export([list_gen/0, list_id_gen/0,  id_tuple_gen/1, describe_gen_id/1, list_gen_rexp/2, check_active/1, ver_gen/0, count_builds/1,count_builds_week/1, list_string_gen/0]).
+-export([list_gen/0, list_id_gen/0,  id_tuple_gen/1, describe_gen_id/1, 
+		list_gen_rexp/2, check_active/1, ver_gen/0, count_builds/1,
+		count_builds_week/1, list_string_gen/0, shedule_start/1, 
+		status/0, status/1, status_string/1]).
 -include_lib("cdashbot_wrk.hrl").
 %%----------------------------------------------------------------------------------------------
 %% Exported Function
@@ -22,7 +25,7 @@ list_gen() ->
 %% Генерируем первоначальный список для монитора
 list_id_gen() ->  
 	lists:map(fun(X) -> id_tuple_gen(X) end, list_gen()).
-
+%% Генерируем кортеж для ets для монитора
 id_tuple_gen(Project) ->
 	Url = ?URL ++ ?API_BL ++ Project ++ ?API_CN10,
 	case check_status(Url) of
@@ -55,6 +58,7 @@ list_gen_rexp(Jlist, Rexp) ->
 	case check_status(Jlist) of
 		true -> 
 			{ok, Rexpc} = re:compile(Rexp, [unicode, caseless]), 
+			
 			Filt = fun(X) ->
 				nomatch =/= re:run(X, Rexpc, [global])
 				end,
@@ -68,7 +72,7 @@ list_gen_rexp(Jlist, Rexp) ->
 check_active(Rexp) -> 
 	Url = ?URL ++ ?API_BL ++ Rexp ++ ?API_CN,
 	case check_status(Url) of 
-		[true, Body] -> 
+		[true, Body] ->  
 			List = lists:append(proplists:get_value(<<"builds">>, 
 					jsonx:decode(erlang:list_to_binary(Body),  [{format, proplist}]))),
 			Year = erlang:binary_to_integer(proplists:get_value(<<"year">>, List)),
@@ -85,6 +89,8 @@ check_active(Rexp) ->
 				_ -> inactive(Id, Count) 
 					
 			end;
+		[true, []] -> 
+			cdashbot_wrk:send(io_lib:format("No such project: ~s~n", [Rexp]));
 		[_, Body] -> 
 			error_text(Body)
 	end.
@@ -108,15 +114,22 @@ ver_gen() ->
 check_status(Url) ->
 			try httpc:request(Url) of
 				{ok, {_, _, Body}} ->
-					Status = proplists:get_value(<<"status">>, jsonx:decode(erlang:list_to_binary(Body),  [{format, proplist}])),
-					[Status, Body];
+					try jsonx:decode(erlang:list_to_binary(Body),  [{format, proplist}]) of
+						{error,_,_} -> 
+							lager:info("Wrong Json: ~s~n", [Body]),
+							check_status(Url);
+						Jlist ->
+							Status = proplists:get_value(<<"status">>, Jlist),
+							[Status, Body]
+
+					catch 
+						_:_ -> ok
+					end;
 				{error,_} ->
 					lager:info("Server no avilable"),
 					check_status(Url)
-			catch 
-				_:_ -> 
-					lager:info("Server no avilable"),
-					check_status(Url)
+			catch
+				_:_ -> ok
 			end.
 
 
@@ -210,7 +223,7 @@ describe_gen_id(Id) ->
 %% Генерация ошибку и Json
 error_text(Body) ->
 			ErrText = proplists:get_value(<<"message">>, jsonx:decode(erlang:list_to_binary(Body),  [{format, proplist}])),
-			io_lib:format("Error: ~s", ErrText).
+			io_lib:format("Error: ~s", [erlang:binary_to_list(ErrText)]).
 
 count_builds(Rexp) -> 
 	Url = ?URL ++ ?API_BL ++ Rexp ++ ?API_DN ++ day_range(3),
@@ -255,5 +268,105 @@ builds_select(Rexp, Count) ->
 						lists:usort(Site)) end, 
 							lists:usort(Name)),
 			lists:map(fun(X) -> describe_gen_id(X) end, lists:append(Blist));
+		[_, Body] -> error_text(Body)
+	end.
+shedule_start(Rexp) -> 
+	[PName | Options] = Rexp,
+	  try make_string(Options) of 	
+		Plist -> 
+			Url = ?URL ++ ?API_LOGIN ++ PName ++ ?API_LOGIN_TOKEN ++ config:get_keys(PName),
+			lager:info("Url: ~s~n", [Url]),
+				case check_status(Url) of 
+					[true, Body] ->
+						Jlist = jsonx:decode(erlang:list_to_binary(Body),  [{format, proplist}]),
+						Token = erlang:binary_to_list(proplists:get_value(<<"token">>, Jlist)),
+						Get_Url	= ?URL ++ ?API_SHED_ADD ++ PName ++ ?API_SHED_TOKEN ++ Token ++ ?API_SHED_USER ++ config:get_value(cdash_user)  ++ Plist,
+						lager:info("Get_Url: ~s~n", [Get_Url]),
+						case check_status(Get_Url) of 
+							[true, NBody] -> 
+								NJlist = jsonx:decode(erlang:list_to_binary(NBody),  [{format, proplist}]),
+								Id = proplists:get_value(<<"id">>, NJlist), 
+								io_lib:format("New build of ~s has been scheduled(id = ~s)", [PName, erlang:binary_to_list(Id)]);
+							[_, NBody] -> 
+								error_text(NBody)
+						end;	   
+					[_, Body] -> 
+						error_text(Body)
+				end
+		catch
+		[error, Key] -> 
+			cdashbot_wrk:send(io_lib:format("Wrong param: ~s~n", [string:sub_string(Key, 2)]))
+		end. 
+			
+
+make_string([Key, Value | List]) -> 
+	case [string:sub_string(Key, 2), Value] of
+		["type", "exp"] -> 
+			[lists:concat(io_lib:format("~s~s~s~s", ["&", string:sub_string(Key, 2), "=", "0"])) | make_string(List)];
+		["type", "nighty"] ->
+			[lists:concat(io_lib:format("~s~s~s~s", ["&", string:sub_string(Key, 2), "=", "1"])) | make_string(List)];
+		["type", "cont"] -> 
+			[lists:concat(io_lib:format("~s~s~s~s", ["&", string:sub_string(Key, 2), "=", "2"])) | make_string(List)];
+		["repo", _] ->	
+			[lists:concat(io_lib:format("~s~s~s~s", ["&", string:sub_string(Key, 2), "=", Value])) | make_string(List)];
+		["branch", _] -> 
+			[lists:concat(io_lib:format("~s~s~s~s", ["&", string:sub_string(Key, 2), "=", Value])) | make_string(List)];
+		["tag", _] -> 
+			[lists:concat(io_lib:format("~s~s~s~s", ["&", string:sub_string(Key, 2), "=", Value])) | make_string(List)];
+		["conf", "dbg"] ->
+			[lists:concat(io_lib:format("~s~s~s~s", ["&", string:sub_string(Key, 2), "=", "0"])) | make_string(List)];
+		["conf", "rel"] ->
+			[lists:concat(io_lib:format("~s~s~s~s", ["&", string:sub_string(Key, 2), "=", "1"])) | make_string(List)];			
+		["conf", "reldbg"] ->
+			[lists:concat(io_lib:format("~s~s~s~s", ["&", string:sub_string(Key, 2), "=", "2"])) | make_string(List)];						
+		["conf", "minsize"] ->
+			[lists:concat(io_lib:format("~s~s~s~s", ["&", string:sub_string(Key, 2), "=", "3"])) | make_string(List)];
+		["compiler", _] ->
+			[lists:concat(io_lib:format("~s~s~s~s", ["&", string:sub_string(Key, 2), "=", Value])) | make_string(List)];
+		["library", _]	->
+			[lists:concat(io_lib:format("~s~s~s~s", ["&", string:sub_string(Key, 2), "=", Value])) | make_string(List)];
+		["site", _] ->
+			[lists:concat(io_lib:format("~s~s~s~s", ["&", string:sub_string(Key, 2), "=", Value])) | make_string(List)];
+		["os", _] -> 
+			[lists:concat(io_lib:format("~s~s~s~s", ["&", string:sub_string(Key, 2), "=", Value])) | make_string(List)];									
+		[_, _] -> 
+			throw([error, Key]) 
+	end;
+	 	
+make_string([])-> [].
+
+status() ->
+	Url = ?URL ++ ?API_STATUS_LIST,
+	case check_status(Url) of 
+		[true, Body] -> 
+			Jlist = jsonx:decode(erlang:list_to_binary(Body),  [{format, proplist}]),
+			List = lists:append(proplists:get_value(<<"schedules">>, Jlist)),
+			status(proplists:get_all_values(<<"id">>, List));
+		[_, Body] -> error_text(Body)
+	end.
+
+status(Rexp) -> 
+	lists:map(fun(X) -> status_string(
+		case is_integer(X) of 
+			true -> 
+				X;
+			false ->
+				erlang:list_to_integer(X)
+		end) end, Rexp). 
+
+status_string(Id) ->
+	Url = ?URL ++ ?API_STATUS_DESCRIBE ++ erlang:integer_to_list(Id),
+	lager:info("~s", [Url]),
+	case check_status(Url) of 
+		[true, Body] -> 
+			Jlist = jsonx:decode(erlang:list_to_binary(Body),  [{format, proplist}]),
+			%lager:info("~s~n", [Jlist]),
+			SList = lists:append(proplists:get_value(<<"schedule">>, Jlist)),
+			Status = proplists:get_value(<<"status">>, SList),
+			Site =  proplists:get_value(<<"site">>, SList),
+			Project = proplists:get_value(<<"project">>, SList),
+			io_lib:format("Build of ~s is ~s on ~s~n", [Project,
+														Status,
+														Site]);
 		[_, Body] -> error_text(Body)
 	end.

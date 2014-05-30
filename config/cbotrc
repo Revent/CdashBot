@@ -1,15 +1,15 @@
-[xmpp]
-xmpp_host=""
-xmpp_account=""
-xmpp_password=""
-xmpp_resource=""
-xmpp_room=""
-xmpp_room_nickname=""
-xmpp_room_password=""
-xmpp_cont=""
-[cdash]
-cdash_url="http://open.cdash.org"
-cdash_user="user"
-cdash_password="password"
-projects_list="all"
-notify_strategy="all"
+{xmpp_host, ""}. %xmpp host
+{xmpp_account, ""}. %xmpp login
+{xmpp_domain, ""}. %xmppp domain
+{xmpp_password, ""}. %xmpp password
+{xmpp_resource, ""}.%xmpp resource
+{xmpp_room, ""}. %xmpp room
+{xmpp_room_nickname, ""}. %room nick
+{xmpp_room_password, ""}. %room password
+{xmpp_cont, "!"}. %cont simbol for bot 
+{cdash_url, ""}. %url of cdash 
+{cdash_user, ""}. %cdash user 
+{cdash_password, ""}. %cdash password
+{projects_list, "all"}.
+{notify_strategy, "all"}.
+{cdash_users, ""}. %users list for manage cdash

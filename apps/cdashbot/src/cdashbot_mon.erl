@@ -6,13 +6,12 @@
 %% ------------------------------------------------------------------
 
 -define(SERVER, ?MODULE).
--include_lib("cdashbot_wrk.hrl").
+-include("cdashbot_wrk.hrl").
 %% ------------------------------------------------------------------
 %% API Function Exports
 %% ------------------------------------------------------------------
 
 -export([start_link/0]).
-
 %% ------------------------------------------------------------------
 %% gen_server Function Exports
 %% ------------------------------------------------------------------
@@ -31,7 +30,7 @@ start_link() ->
 %% gen_server Function Definitions
 %% ------------------------------------------------------------------
 
-init([]) ->
+init([]) ->   
 	ets:new(build, [named_table]),
 	check_last_build(),
     Timer = erlang:send_after(5000, ?MODULE, project_loop),
@@ -77,9 +76,3 @@ diff_project_id(Project) ->
                                   NewList -- List),
             ets:insert(build, NewTuple) 
     end.
-
-
-
-
-    
-

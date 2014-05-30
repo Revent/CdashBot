@@ -1,19 +1,21 @@
--define(URL, cdashbot_wrk:get_value(cdash_url, cdash)).
--define(USER, cdashbot_wrk:get_value(cdash_user, cdash)).
--define(PASS, cdashbot_wrk:get_value(cdash_password, cdash)).
--define(PLIST, cdashbot_wrk:get_value(projects_list, cdash)).
--define(NOTIFY, cdashbot_wrk:get_value(notify_strategy, cdash)).
+-define(URL, config:get_value(cdash_url)).
+-define(USER, config:get_value(cdash_user)).
+-define(PASS, config:get_value(cdash_password)).
+-define(PLIST, config:get_value(projects_list)).
+-define(NOTIFY, config:get_value(notify_strategy)).
+-define(KEYS, os:getenv("HOME") ++ "/.config/cdashbot/cdash_keys").
+-define(USERS, config:get_value(cdash_users)).
 -define(API_LIST, "/api/?method=project&task=list").
 -define(API_SUMM, "/api/?method=build&task=sitetestfailures&project=").
--define(USERNAME, cdashbot_wrk:get_value(xmpp_account, xmpp)).
--define(JSERVER, cdashbot_wrk:get_value(xmpp_host, xmpp)).
--define(JDOMAIN, cdashbot_wrk:get_value(xmpp_domain, xmpp)).
--define(PASSWORD, cdashbot_wrk:get_value(xmpp_password, xmpp)).
--define(NICK, cdashbot_wrk:get_value(xmpp_room_nickname, xmpp)).
--define(ROOM, cdashbot_wrk:get_value(xmpp_room, xmpp)).
+-define(USERNAME, config:get_value(xmpp_account)).
+-define(JSERVER, config:get_value(xmpp_host)).
+-define(JDOMAIN, config:get_value(xmpp_domain)).
+-define(PASSWORD, config:get_value(xmpp_password)).
+-define(NICK, config:get_value(xmpp_room_nickname)).
+-define(ROOM, config:get_value(xmpp_room)).
 -define(HELP, file:read_file("/home/revent/.config/cdashbot/cbothelp")).
 -define(CONF, os:getenv("HOME")  ++ "/.config/cdashbot/cbotrc").
--define(CONT, cdashbot_wrk:get_value(xmpp_cont, xmpp)).
+-define(CONT, config:get_value(xmpp_cont)).
 -define(SUMM, "http://open.cdash.org/buildSummary.php?buildid=").
 -define(API_VER, "/api/?method=cdash&task=version").
 -define(API_BL, "/api/?method=build&task=list&project=").
@@ -23,3 +25,18 @@
 -define(API_DL, "/api/?method=build&task=list&project=").
 -define(API_DN, "&date=").
 -define(API_DESC, "/api/?method=project&task=describe&project=").
+-define(API_LOGIN, "/api/?method=project&task=login&project=").
+-define(API_LOGIN_TOKEN, "&key=").
+-define(API_SHED_ADD, "/api/?method=schedule&task=add&project=").
+-define(API_SHED_TOKEN, "&token=").
+-define(API_SHED_USER, "&user=").
+-define(API_STATUS_LIST, "/api/?method=schedule&task=list&status=running").
+-define(API_STATUS_DESCRIBE, "/api/?method=schedule&task=describe&schid=").
+
+
+%% ------------------------------------------------------------------
+%% Records
+%% ------------------------------------------------------------------
+
+-record(jid, {nick, 
+              jid}).

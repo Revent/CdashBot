@@ -9,7 +9,7 @@
 %% Application callbacks
 %% ===================================================================
 
-start() ->
+start() -> 
 	application:start(inets),
 	application:start(exmpp),
 	application:start(lager), 
@@ -21,4 +21,5 @@ start(_StartType, _StartArgs) ->
     cdashbot_sup:start_link().
 
 stop(_State) ->
+	application:stop(mnesia),
     ok.
