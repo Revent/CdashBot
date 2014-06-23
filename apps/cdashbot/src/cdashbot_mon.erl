@@ -72,7 +72,7 @@ diff_project_id(Project) ->
         false -> ok;
         true -> lager:info("New build: ~s", NewList -- List),
             lists:foreach(fun(X) -> 
-                            cdashbot_wrk:send(api_module:describe_gen_id(erlang:list_to_integer(X))) end,
+                            cdashbot_wrk:send("New Build" ++ api_module:describe_gen_id(erlang:list_to_integer(X))) end,
                                   NewList -- List),
             ets:insert(build, NewTuple) 
     end.

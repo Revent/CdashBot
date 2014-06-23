@@ -133,9 +133,14 @@ process_message("help" = Message, State) ->
 process_message("version" = Message, State) ->
 	lager:info("You recieved: ~s~n", [Message]),
 	process_send_packet(api_module:ver_gen(), State); 
+
 process_message("status" = Message, State) ->
 	lager:info("You recieved: ~s~n", [Message]),
 	process_send_packet(api_module:status(), State);
+
+process_message("site" = Message, State) ->
+	lager:info("You recieved: ~s~n", [Message]),
+	process_send_packet(api_module:site_list(), State);
 
 
 process_message(Message, State) ->
@@ -152,7 +157,7 @@ process_send_packet(List, State);
 
 process_message("summary" = Message, Rexp, _, State) ->
 	lager:info("You received:  ~s ~s, ~n", [Message, Rexp]),
-	process_send_packet(api_module:check_active(Rexp), State);
+	process_send_packet("Last build" ++ api_module:check_active(Rexp), State);
 
 process_message("schedule" = Message, Rexp, From, State) -> 
 	lager:info("You recieved: ~s ~s~n", [Message, Rexp]),
@@ -164,6 +169,10 @@ process_message("schedule" = Message, Rexp, From, State) ->
 process_message("status" = Message, Rexp, _, State) ->
 	lager:info("You received:  ~s ~s, ~n", [Message, Rexp]),
 	process_send_packet(api_module:status(Rexp), State); 
+
+process_message("site" = Message, Rexp, _, State) -> 
+	lager:info("You received:  ~s ~s, ~n", [Message, Rexp]),
+	process_send_packet(api_module:site(Rexp), State);
 
 
 process_message(Message, _, _, State) ->

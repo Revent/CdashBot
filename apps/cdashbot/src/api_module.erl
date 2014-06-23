@@ -2,7 +2,7 @@
 -export([list_gen/0, list_id_gen/0,  id_tuple_gen/1, describe_gen_id/1, 
 		list_gen_rexp/2, check_active/1, ver_gen/0, count_builds/1,
 		count_builds_week/1, list_string_gen/0, shedule_start/1, 
-		status/0, status/1, status_string/1]).
+		status/0, status/1, status_string/1, site_list/0, site/1]).
 -include_lib("cdashbot_wrk.hrl").
 %%----------------------------------------------------------------------------------------------
 %% Exported Function
@@ -190,36 +190,39 @@ describe_gen_id(Id) ->
 			TestS = TestP + TestF + TestN,
 			case {Err, Warn, TestS} of 
 				{0, Warn, TestS} when Warn > 0, TestS > 0 -> 
-					io_lib:format("Last build on ~s: ~s. Warnings: ~s. Tests complited: ~s/~s.~n",
+									io_lib:format(" on ~s: ~s. Warnings: ~s. Tests complited: ~s/~s.~n",
 																					[Site, 
 						 															 Name,
 						 									 erlang:integer_to_list(Warn),
 						 									erlang:integer_to_list(TestP),
 						 								  erlang:integer_to_list(TestS)]);
-				{0, 0, TestS} when TestS > 0 ->   io_lib:format("Last build on ~s: ~s. Tests complited: ~s/~s.~n",
+				{0, 0, TestS} when TestS > 0 ->   io_lib:format(" on ~s: ~s. Tests complited: ~s/~s.~n",
 																					[Site, 
 						 															 Name,
 						 									erlang:integer_to_list(TestP),
 						 								  erlang:integer_to_list(TestS)]);
-				{0, Warn, 0} when Warn > 0 ->	io_lib:format("Last build on ~s: ~s. Build Warnings: ~s.~n", 
+				{0, Warn, 0} when Warn > 0 ->	io_lib:format(" on ~s: ~s. Build Warnings: ~s.~n", 
 																					[Site, 
 						 															 Name,
 						 								   erlang:integer_to_list(Warn)]);
-				{Err, 0, _} when Err > 0 -> io_lib:format("Last build on ~s: ~s, failed. Build Errors: ~s.~n", 
+				{Err, 0, _} when Err > 0 -> io_lib:format(" on ~s: ~s, failed. Build Errors: ~s.~n", 
 																					[Site, 
 						 															 Name,
 						 									erlang:integer_to_list(Err)]);
-				{Err, Warn, _} when Err > 0, Warn >0 -> io_lib:format("Last build on ~s: ~s, failed. Build Errors: ~s. Build Warnings: ~s.~n", 
+				{Err, Warn, _} when Err > 0, Warn >0 -> io_lib:format(" on ~s: ~s, failed. Build Errors: ~s. Build Warnings: ~s.~n", 
 																					[Site, 
 						 															 Name,
 						 									  erlang:integer_to_list(Err),
 						 								   erlang:integer_to_list(Warn)]);
-				{0, 0, 0} -> io_lib:format("Last build on ~s: ~s. All good.~n",
+				{0, 0, 0} -> io_lib:format(" on ~s: ~s. All good.~n",
 																					[Site, 
 																					Name]) 
 			end;
 		[_, Body] -> error_text(Body)
 	end.
+
+%build_describe_id() -> 
+	
 %% Генерация ошибку и Json
 error_text(Body) ->
 			ErrText = proplists:get_value(<<"message">>, jsonx:decode(erlang:list_to_binary(Body),  [{format, proplist}])),
@@ -365,8 +368,77 @@ status_string(Id) ->
 			Status = proplists:get_value(<<"status">>, SList),
 			Site =  proplists:get_value(<<"site">>, SList),
 			Project = proplists:get_value(<<"project">>, SList),
-			io_lib:format("Build of ~s is ~s on ~s~n", [Project,
-														Status,
-														Site]);
+			case Status of 
+				"scheduled" -> 
+					io_lib:format("Build of ~s is ~s~n", 
+														[Project,
+														 Status]);
+				_ -> 
+					io_lib:format("Build of ~s is ~s on ~s~n", [Project,
+																Status,
+																Site])
+			end;
 		[_, Body] -> error_text(Body)
 	end.
+
+site_list() ->
+	Url = ?URL ++ ?API_SITE,
+	case check_status(Url) of 
+		[true, Body] -> 
+			Jlist = jsonx:decode(erlang:list_to_binary(Body),  [{format, proplist}]),
+			Slist = lists:sort(lists:map(fun(X) -> erlang:binary_to_list(X) end, 
+						proplists:get_all_values(<<"name">>, 
+							lists:append(proplists:get_value(<<"sites">>, 
+											Jlist))))),
+			Online = lists:map(fun(X) -> site_describe(X) ++ "online" ++ io_lib:nl() end,
+						lists:filter(fun(X) -> site_status(X) =< 300 end, Slist)),
+			Offline = lists:map(fun(X) -> site_describe(X) ++ "offline" ++io_lib:nl() end,
+						lists:filter(fun(X) -> site_status(X) > 300 end, Slist)),
+			Online ++ Offline;  
+
+		[_, Body] -> error_text(Body)
+	end.
+
+site(Rexp) -> 
+	case site_status(Rexp) =< 300 of
+		true -> site_describe(Rexp) ++ "online" ++ io_lib:nl();
+		false -> site_describe(Rexp) ++ "offline" ++ io_lib:nl() 
+	end.
+
+
+site_status(Site) ->
+	Url = ?URL ++ ?API_SITE_DESCRIBE ++ Site,
+	case check_status(Url) of
+		[true, Body] -> 
+			Jlist = jsonx:decode(erlang:list_to_binary(Body),  [{format, proplist}]),
+			Slist = lists:append(proplists:get_value(<<"sites">>, 
+									Jlist)),
+			[Date, Time] = string:tokens(erlang:binary_to_list(proplists:get_value(<<"last_ping">>, 
+											Slist)), " "),
+			DateS = calendar:datetime_to_gregorian_seconds({
+						erlang:list_to_tuple(
+							lists:map(fun(X) -> erlang:list_to_integer(X) end, 
+								string:tokens(Date, "-"))), 
+						erlang:list_to_tuple(
+							lists:map(fun(X) -> erlang:list_to_integer(X) end, 
+								string:tokens(Time,":")))}), 
+			NowS = calendar:datetime_to_gregorian_seconds(calendar:now_to_local_time(erlang:now())),
+			NowS - DateS;
+ 		[_, Body] -> error_text(Body)
+	end.
+
+site_describe(Site) ->
+	Url = ?URL ++ ?API_SITE_DESCRIBE ++ Site,
+	case check_status(Url) of
+		[true, Body] -> 
+			Jlist = jsonx:decode(erlang:list_to_binary(Body),  [{format, proplist}]),
+			Slist = lists:append(proplists:get_value(<<"sites">>, 
+									Jlist)),
+			System = erlang:binary_to_list(proplists:get_value(<<"system_name">>, Slist)),
+			Os = erlang:binary_to_list(proplists:get_value(<<"os_name">>, Slist)),			 
+			io_lib:format("~s: ~s (~s) - ", [Site,
+										    System,
+										    Os]);
+		[_, Body] -> error_text(Body)
+	end.
+

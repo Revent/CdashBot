@@ -32,6 +32,8 @@
 -define(API_SHED_USER, "&user=").
 -define(API_STATUS_LIST, "/api/?method=schedule&task=list&status=running").
 -define(API_STATUS_DESCRIBE, "/api/?method=schedule&task=describe&schid=").
+-define(API_SITE, "/api/?method=site&task=list").
+-define(API_SITE_DESCRIBE, "/api/?method=site&task=describe&site=").
 
 
 %% ------------------------------------------------------------------
