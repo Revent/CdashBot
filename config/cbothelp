@@ -1,30 +1,16 @@
-* help -- вывести справку по командам ботам.
-* version -- показать версию бота и версию cdash.
-* project [<шаблон>] -- вывести список проектов, доступных в cdash; если
-     указан шаблон, то вывести только те, чьё имя соответсвует шаблону.
-     Примечание: соответсвует команде list Web API CDash.
-* summary <имя проекта> -- вывести краткую информацию о статусе сборок проекта; 
-     выводится список хостов, последних сборок на хостах и список не прой-
-     денных в этих сборках тестов.
-* schedule <имя проекта> [<параметры сборки>] -- запустить новую сборку
-     возвращает id запущенной сборки.
-     Параметры сборки:
-         -type <exp|nighty|cont> -- тип сборки. Возможные варианты: экспери-
-             ментальная сборка, ночная и непрерывная.
-         -repo <url> -- ссылка на альтернативный репозиторий проекта.
-         -branch <назв. модуля/ветки> -- для проектов использующих git, пара-
-             метр задаёт имя ветки в репозитории, для последнего коммита в
-             которой будет произведена сборка. Для остальных СКВ параметр за-
-             даёт имя модуля.
-         -tag <метка> -- имя метки в репозитории.
-         -conf <dbg|rel|reldbg|minsize> -- конфигурация сборки. Доступные ва-
-             рианты: отладочная сборка, релиз, релиз с отладочной информацией
-             и сборка оптимизированная под минимальный размер результирующих
-             файлов.
-         -compiler <имя компилятора>[-<версия>] -- название и опционально
-             версия компилятора, которым следует выполнить сборку проекта.
-         -library <имя библиотеки>[-<версия>] -- название и версия библиотеки,
-             с которой будет производиться линковка.
-         -site <имя сайта> -- сайт, на котором следует провести сборку.
-         -os <имя ОС> [<разрядность ОС>] -- название и опционально разрядность
-             ОС, под которую будет производиться сборка кода.
+* project [<regexp>] - print the project list.
+* site [<regexp>] - print the site list.
+* summary <project name> - show project summary information.
+* schedule <project name> [<build parameters>] - schedule a new build.
+  Parameters:
+    -type exp|nighty|cont - build type.
+    -repo <url> - alternative repository url.
+    -branch <name> - name of the repository branch/module.
+    -tag <name> - name of the repository tag.
+    -conf dbg|rel|reldbg|minsize - configuration type for compilation.
+    -compiler <name>[-<version>] - compiler name and optionally version.
+    -library <name>[-<version>] - library name and optionally version.
+    -site <name> - specify that the build should run on this site.
+    -os <name> [<osbits>] - name of the OS to run the build.
+* help - print this help message.
+* version - print cdash and bot versions.
