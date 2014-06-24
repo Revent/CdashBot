@@ -108,7 +108,7 @@ ver_gen() ->
 	case check_status(Url) of 
 		[true, Body] -> 
 			List = erlang:binary_to_list(proplists:get_value(<<"version">>, jsonx:decode(erlang:list_to_binary(Body),  [{format, proplist}]))), 
-			io_lib:format("Cdash version: ~s~n", [List]);
+			io_lib:format("CDash version: ~s~n", [List]);
 		[_, Body] -> 
 			error_text(Body)
 	end.
@@ -133,7 +133,7 @@ check_status(Url) ->
 						_:_ -> ok
 					end;
 				{error,_} ->
-					lager:info("Server no avilable ~s", [Url]),
+					lager:info("Server is not available ~s", [Url]),
 					check_status(Url)
 			catch
 				_:_ -> ok
@@ -148,7 +148,7 @@ inactive(Id, Count) ->
 			Name = proplists:get_value(<<"project">>, List),
 			io_lib:format("Project ~s is inactive (no builds for more than ~s days)",
       												[Name, erlang:integer_to_list(Count)]),
-			describe_gen_id(erlang:list_to_integer(Id));
+			"Last build" ++ describe_gen_id(erlang:list_to_integer(Id));
 		[_, Body] -> 
 			error_text(Body)
 	end.
@@ -197,13 +197,13 @@ describe_gen_id(Id) ->
 			TestS = TestP + TestF + TestN,
 			case {Err, Warn, TestS} of 
 				{0, Warn, TestS} when Warn > 0, TestS > 0 -> 
-									io_lib:format(" on ~s: ~s. Warnings: ~s. Tests complited: ~s/~s.~n",
+									io_lib:format(" on ~s: ~s. Warnings: ~s. Tests passed: ~s/~s.~n",
 																					[Site, 
 						 															 Name,
 						 									 erlang:integer_to_list(Warn),
 						 									erlang:integer_to_list(TestP),
 						 								  erlang:integer_to_list(TestS)]);
-				{0, 0, TestS} when TestS > 0 ->   io_lib:format(" on ~s: ~s. Tests complited: ~s/~s.~n",
+				{0, 0, TestS} when TestS > 0 ->   io_lib:format(" on ~s: ~s. Tests passed: ~s/~s.~n",
 																					[Site, 
 						 															 Name,
 						 									erlang:integer_to_list(TestP),
@@ -277,7 +277,7 @@ builds_select(Rexp, Count) ->
 					proplists:get_value(X, proplists:get_all_values(Y, Zlist)) end, 
 						lists:usort(Site)) end, 
 							lists:usort(Name)),
-			lists:map(fun(X) -> describe_gen_id(X) end, lists:append(Blist));
+			lists:map(fun(X) -> "Last build" ++ describe_gen_id(X) end, lists:append(Blist));
 		[_, Body] -> error_text(Body)
 	end.
 shedule_start(Rexp) -> 
@@ -296,7 +296,7 @@ shedule_start(Rexp) ->
 							[true, NBody] -> 
 								NJlist = jsonx:decode(erlang:list_to_binary(NBody),  [{format, proplist}]),
 								Id = proplists:get_value(<<"id">>, NJlist), 
-								io_lib:format("New build of ~s has been scheduled(id = ~s)", [PName, erlang:binary_to_list(Id)]);
+								io_lib:format("New build of ~s has been scheduled (id = ~s)", [PName, erlang:binary_to_list(Id)]);
 							[_, NBody] -> 
 								error_text(NBody)
 						end;	   
