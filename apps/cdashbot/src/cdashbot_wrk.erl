@@ -128,7 +128,7 @@ process_message("project" = Message, State) ->
 process_message("help" = Message, State) ->
 	{ok, Help} = ?HELP,
 	lager:info("You recieved: ~s~n", [Message]),
-	process_send_packet(Help, State);
+	process_send_packet(erlang:binary_to_list(Help) ++ "* Controlling symbol: " ++ ?CONT, State);
 
 process_message("version" = Message, State) ->
 	lager:info("You recieved: ~s~n", [Message]),
@@ -147,13 +147,8 @@ process_message(Message, State) ->
 	process_send_packet(io_lib:format("Unknown command: ~s~n", [Message]) , State).
 
 process_message("project" = Message, Rexp, _, State) ->
-{ok, {_, _, Body}} = httpc:request(?URL ++ ?API_LIST),
 lager:info("You received:  ~s ~s~n", [Message, Rexp]), 
-case string:equal(?PLIST, "all")  of
-		true -> List = api_module:list_gen_rexp(Body, Rexp); 
-		false -> List = [?PLIST]
-	end,
-process_send_packet(List, State);
+process_send_packet(api_module:list_gen_rexp(Rexp), State);
 
 process_message("summary" = Message, Rexp, _, State) ->
 	lager:info("You received:  ~s ~s, ~n", [Message, Rexp]),

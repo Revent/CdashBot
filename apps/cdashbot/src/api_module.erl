@@ -1,6 +1,6 @@
 -module(api_module).
 -export([list_gen/0, list_id_gen/0,  id_tuple_gen/1, describe_gen_id/1, 
-		list_gen_rexp/2, check_active/1, ver_gen/0, count_builds/1,
+		list_gen_rexp/1, check_active/1, ver_gen/0, count_builds/1,
 		count_builds_week/1, list_string_gen/0, shedule_start/1, 
 		status/0, status/1, status_string/1, site_list/0, site/1]).
 -include_lib("cdashbot_wrk.hrl").
@@ -54,20 +54,27 @@ list_string_gen() ->
 
 %% Проверяем и генерируем список проектов согласно Regexp.
 
-list_gen_rexp(Jlist, Rexp) -> 
-	case check_status(Jlist) of
-		true -> 
-			{ok, Rexpc} = re:compile(Rexp, [unicode, caseless]), 
-			
-			Filt = fun(X) ->
-				nomatch =/= re:run(X, Rexpc, [global])
-				end,
-			List = lists:filter(Filt, [erlang:binary_to_list(X) || X <- proplists:get_all_values(<<"name">>, 
-			lists:append(proplists:get_value(<<"projects">>, jsonx:decode(erlang:list_to_binary(Jlist),  [{format, proplist}]))))]),
-			string:join(lists:map(fun(X) -> describe_gen(X) end, List), "");
-		_ -> 
-			error_text(Jlist)
-	end.	
+list_gen_rexp(Rexp) -> 
+	case string:equal(?PLIST, "all") of
+	true  -> 
+		Url = ?URL ++ ?API_LIST,
+		Plist = case check_status(Url) of
+			[true, Body] -> 
+				List = lists:append(proplists:get_value(<<"projects">>, 
+					jsonx:decode(erlang:list_to_binary(Body),  [{format, proplist}]))),
+					proplists:get_all_values(<<"name">>, List);
+			[_, Body] -> error_text(Body)
+		end;
+	false -> 
+		Plist = lists:map(fun(U) -> erlang:list_to_binary(U) end, string:tokens(?PLIST, ", "))
+	end,
+	{ok, Rexpc} = re:compile(Rexp, [unicode, caseless]), 
+		Filt = fun(Y) ->
+		nomatch =/= re:run(Y, Rexpc, [global])
+			end,
+	lists:map(fun(Z) -> describe_gen(erlang:binary_to_list(Z)) end, 
+			lists:filter(Filt, Plist)). 
+
 %%  Проверяем проект на активность.
 check_active(Rexp) -> 
 	Url = ?URL ++ ?API_BL ++ Rexp ++ ?API_CN,
@@ -126,7 +133,7 @@ check_status(Url) ->
 						_:_ -> ok
 					end;
 				{error,_} ->
-					lager:info("Server no avilable"),
+					lager:info("Server no avilable ~s", [Url]),
 					check_status(Url)
 			catch
 				_:_ -> ok
@@ -400,10 +407,27 @@ site_list() ->
 	end.
 
 site(Rexp) -> 
-	case site_status(Rexp) =< 300 of
-		true -> site_describe(Rexp) ++ "online" ++ io_lib:nl();
-		false -> site_describe(Rexp) ++ "offline" ++ io_lib:nl() 
+	Url = ?URL ++ ?API_SITE,
+	case check_status(Url) of 
+		[true, Body] -> 
+			{ok, Rexpc} = re:compile(Rexp, [unicode, caseless]), 
+			Filt = fun(Y) ->
+			nomatch =/= re:run(Y, Rexpc, [global])
+					end,
+			Jlist = jsonx:decode(erlang:list_to_binary(Body),  [{format, proplist}]),
+			Slist = lists:map(fun(X) -> erlang:binary_to_list(X) end, 
+						lists:filter(Filt, 
+							lists:sort(proplists:get_all_values(<<"name">>, 
+											lists:append(proplists:get_value(<<"sites">>, 
+													Jlist)))))),
+			Online = lists:map(fun(X) -> site_describe(X) ++ "online" ++ io_lib:nl() end,
+						lists:filter(fun(X) -> site_status(X) =< 300 end, Slist)),
+			Offline = lists:map(fun(X) -> site_describe(X) ++ "offline" ++ io_lib:nl() end,
+						lists:filter(fun(X) -> site_status(X) > 300 end, Slist)),
+			Online ++ Offline;
+		[_, Body] -> error_text(Body)
 	end.
+	
 
 
 site_status(Site) ->
@@ -422,7 +446,7 @@ site_status(Site) ->
 						erlang:list_to_tuple(
 							lists:map(fun(X) -> erlang:list_to_integer(X) end, 
 								string:tokens(Time,":")))}), 
-			NowS = calendar:datetime_to_gregorian_seconds(calendar:now_to_local_time(erlang:now())),
+			NowS = calendar:datetime_to_gregorian_seconds(calendar:now_to_universal_time(erlang:now())),
 			NowS - DateS;
  		[_, Body] -> error_text(Body)
 	end.
