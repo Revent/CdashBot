@@ -118,28 +118,28 @@ code_change(_OldVsn, State, _Extra) ->
 %% ------------------------------------------------------------------
 
 process_message("ping" = Message, State) ->
-	lager:info("You recieved: ~s~n", [Message]),
+	lager:info("You received: ~s~n", [Message]),
 	process_send_packet("pong", State);
 
 process_message("project" = Message, State) ->
-	lager:info("You recieved: ~s~n", [Message]),	
+	lager:info("You received: ~s~n", [Message]),
 	process_send_packet(api_module:list_string_gen(), State); 
 
 process_message("help" = Message, State) ->
 	{ok, Help} = ?HELP,
-	lager:info("You recieved: ~s~n", [Message]),
-	process_send_packet(erlang:binary_to_list(Help) ++ "* Controlling symbol: " ++ ?CONT, State);
+	lager:info("You received: ~s~n", [Message]),
+	process_send_packet(erlang:binary_to_list(Help), State);
 
 process_message("version" = Message, State) ->
-	lager:info("You recieved: ~s~n", [Message]),
+	lager:info("You received: ~s~n", [Message]),
 	process_send_packet(api_module:ver_gen(), State); 
 
 process_message("status" = Message, State) ->
-	lager:info("You recieved: ~s~n", [Message]),
+	lager:info("You received: ~s~n", [Message]),
 	process_send_packet(api_module:status(), State);
 
 process_message("site" = Message, State) ->
-	lager:info("You recieved: ~s~n", [Message]),
+	lager:info("You received: ~s~n", [Message]),
 	process_send_packet(api_module:site_list(), State);
 
 
@@ -147,26 +147,26 @@ process_message(Message, State) ->
 	process_send_packet(io_lib:format("Unknown command: ~s~n", [Message]) , State).
 
 process_message("project" = Message, Rexp, _, State) ->
-lager:info("You received:  ~s ~s~n", [Message, Rexp]), 
+lager:info("You received: ~s ~s~n", [Message, Rexp]),
 process_send_packet(api_module:list_gen_rexp(Rexp), State);
 
 process_message("summary" = Message, Rexp, _, State) ->
-	lager:info("You received:  ~s ~s, ~n", [Message, Rexp]),
-	process_send_packet("Last build" ++ api_module:check_active(Rexp), State);
+	lager:info("You received: ~s ~s, ~n", [Message, Rexp]),
+	process_send_packet(api_module:check_active(Rexp), State);
 
 process_message("schedule" = Message, Rexp, From, State) -> 
-	lager:info("You recieved: ~s ~s~n", [Message, Rexp]),
+	lager:info("You received: ~s ~s~n", [Message, Rexp]),
 	case lists:filter(fun(X) -> string:equal(From, X) end , string:tokens(?USERS, ",")) of 
-		[] ->  process_send_packet("You not autorized!", State);
+		[] ->  process_send_packet("You are not authorized!", State);
 		[From] -> process_send_packet(api_module:shedule_start(Rexp) , State)
 	end; 
 
 process_message("status" = Message, Rexp, _, State) ->
-	lager:info("You received:  ~s ~s, ~n", [Message, Rexp]),
+	lager:info("You received: ~s ~s, ~n", [Message, Rexp]),
 	process_send_packet(api_module:status(Rexp), State); 
 
 process_message("site" = Message, Rexp, _, State) -> 
-	lager:info("You received:  ~s ~s, ~n", [Message, Rexp]),
+	lager:info("You received: ~s ~s, ~n", [Message, Rexp]),
 	process_send_packet(api_module:site(Rexp), State);
 
 

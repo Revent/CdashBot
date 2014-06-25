@@ -13,7 +13,7 @@
 -define(PASSWORD, config:get_value(xmpp_password)).
 -define(NICK, config:get_value(xmpp_room_nickname)).
 -define(ROOM, config:get_value(xmpp_room)).
--define(HELP, file:read_file("/home/revent/.config/cdashbot/cbothelp")).
+-define(HELP, file:read_file(os:getenv("HOME") ++ "/.config/cdashbot/cbothelp")).
 -define(CONF, os:getenv("HOME")  ++ "/.config/cdashbot/cbotrc").
 -define(CONT, config:get_value(xmpp_cont)).
 -define(SUMM, "http://open.cdash.org/buildSummary.php?buildid=").
