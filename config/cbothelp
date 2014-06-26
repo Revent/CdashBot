@@ -12,5 +12,6 @@
     -library <name>[-<version>] - library name and optionally version.
     -site <name> - specify that the build should run on this site.
     -os <name> [<osbits>] - name of the OS to run the build.
+* status <schedule id> - print schedule status.
 * help - print this help message.
 * version - print cdash and bot versions.
