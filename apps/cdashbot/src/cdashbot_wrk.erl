@@ -142,6 +142,9 @@ process_message("site" = Message, State) ->
 	lager:info("You received: ~s~n", [Message]),
 	process_send_packet(api_module:site_list(), State);
 
+process_message("summary" = Message, State) -> 
+	lager:info("You received: ~s~n", [Message]),
+	process_send_packet(io_lib:format("Error: Command ~s is required params", [Message]), State);
 
 process_message(Message, State) ->
 	process_send_packet(io_lib:format("Unknown command: ~s~n", [Message]) , State).

@@ -296,7 +296,8 @@ shedule_start(Rexp) ->
 							[true, NBody] -> 
 								NJlist = jsonx:decode(erlang:list_to_binary(NBody),  [{format, proplist}]),
 								Id = proplists:get_value(<<"id">>, NJlist), 
-								io_lib:format("New build of ~s has been scheduled (id = ~s)", [PName, erlang:binary_to_list(Id)]);
+								io_lib:format("New build of ~s has been scheduled (id = ~s)", [PName, 
+																							   erlang:binary_to_list(Id)]);
 							[_, NBody] -> 
 								error_text(NBody)
 						end;	   
@@ -340,10 +341,12 @@ make_string([Key, Value | List]) ->
 		["os", _] -> 
 			[lists:concat(io_lib:format("~s~s~s~s", ["&", string:sub_string(Key, 2), "=", Value])) | make_string(List)];									
 		[_, _] -> 
-			throw([error, Key]) 
+			throw([error, Key])
+		
 	end;
-	 	
+make_string([Key])-> throw([error, Key]); 	
 make_string([])-> [].
+
 
 status() ->
 	Url = ?URL ++ ?API_STATUS_LIST,
@@ -465,4 +468,3 @@ site_describe(Site) ->
 										    Os]);
 		[_, Body] -> error_text(Body)
 	end.
-
