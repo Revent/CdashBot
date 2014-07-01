@@ -82,11 +82,9 @@ check_active(Rexp) ->
 		[true, Body] ->  
 			List = lists:append(proplists:get_value(<<"builds">>, 
 					jsonx:decode(erlang:list_to_binary(Body),  [{format, proplist}]))),
-			Year = erlang:binary_to_integer(proplists:get_value(<<"year">>, List)),
-			Month = erlang:binary_to_integer(proplists:get_value(<<"month">>, List)),
-			Day = erlang:binary_to_integer(proplists:get_value(<<"day">>, List)),
+			{Date, _Time} = get_date_time(List),
 			Id = erlang:integer_to_list(proplists:get_value(<<"id">>, List)), 
-			Count = calendar:date_to_gregorian_days(date()) - calendar:date_to_gregorian_days({Year, Month, Day}),
+			Count = calendar:date_to_gregorian_days(date()) - calendar:date_to_gregorian_days(Date),
 			case  Count =< 7 of
 				true -> 
 					case Count =< 3 of 
@@ -438,19 +436,12 @@ site_status(Site) ->
 	case check_status(Url) of
 		[true, Body] -> 
 			Jlist = jsonx:decode(erlang:list_to_binary(Body),  [{format, proplist}]),
-			Slist = lists:append(proplists:get_value(<<"sites">>, 
-									Jlist)),
-			[Date, Time] = string:tokens(erlang:binary_to_list(proplists:get_value(<<"last_ping">>, 
-											Slist)), " "),
-			DateS = calendar:datetime_to_gregorian_seconds({
-						erlang:list_to_tuple(
-							lists:map(fun(X) -> erlang:list_to_integer(X) end, 
-								string:tokens(Date, "-"))), 
-						erlang:list_to_tuple(
-							lists:map(fun(X) -> erlang:list_to_integer(X) end, 
-								string:tokens(Time,":")))}), 
+			Slist = proplists:get_value(<<"last_ping">>, lists:append(proplists:get_value(<<"sites">>, 
+									Jlist))),
+			
+			
 			NowS = calendar:datetime_to_gregorian_seconds(calendar:now_to_universal_time(erlang:now())),
-			NowS - DateS;
+			NowS - calendar:datetime_to_gregorian_seconds(get_date_time(Slist));
  		[_, Body] -> error_text(Body)
 	end.
 
@@ -468,3 +459,13 @@ site_describe(Site) ->
 										    Os]);
 		[_, Body] -> error_text(Body)
 	end.
+
+get_date_time(Plist) -> 
+	{{erlang:binary_to_integer(proplists:get_value(<<"year">>, Plist)),
+	 erlang:binary_to_integer(proplists:get_value(<<"month">>, Plist)),
+	 erlang:binary_to_integer(proplists:get_value(<<"day">>, Plist))},
+   	erlang:list_to_tuple(
+				lists:map(fun(X) -> erlang:list_to_integer(X) end, 
+					string:tokens(erlang:binary_to_list(
+						proplists:get_value(<<"time">>, Plist)),":")))}.
+
