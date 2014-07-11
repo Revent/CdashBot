@@ -1,8 +1,8 @@
 -module(api_module).
--export([list_gen/0, list_id_gen/0,  id_tuple_gen/1, describe_gen_id/1, 
+-export([list_gen/0, list_id_gen/0,  id_tuple_gen/2, describe_gen_id/1, 
 		list_gen_rexp/1, check_active/1, ver_gen/0, count_builds/1,
 		count_builds_week/1, list_string_gen/0, shedule_start/1, 
-		status/0, status/1, status_string/1, site_list/0, site/1]).
+		status/0, status/1, status_string/1, site_list/0, site_list/1, site/1, new_builds_desc/1]).
 -include_lib("cdashbot_wrk.hrl").
 %%----------------------------------------------------------------------------------------------
 %% Exported Function
@@ -24,17 +24,17 @@ list_gen() ->
 	end.
 %% Генерируем первоначальный список для монитора
 list_id_gen() ->  
-	lists:map(fun(X) -> id_tuple_gen(X) end, list_gen()).
+	lists:map(fun(X) -> site_list(X) end, list_gen()).
 %% Генерируем кортеж для ets для монитора
-id_tuple_gen(Project) ->
-	Url = ?URL ++ ?API_BL ++ Project ++ ?API_CN10,
+id_tuple_gen(Site, Project) ->
+	Url = ?URL ++ ?API_BL ++ Project ++ ?API_BUILD_SITE ++ Site ++ ?API_CN10,
 	case check_status(Url) of
 		[true, Body] ->
 			List = lists:append(proplists:get_value(<<"builds">>, 
 				jsonx:decode(erlang:list_to_binary(Body),  [{format, proplist}]))),
 			Id_list = proplists:get_all_values(<<"id">>, List), 
 			Id = lists:map(fun(X) -> erlang:integer_to_list(X) end, Id_list), 
-			{Project, Id};
+			{Project, {Site, Id}};
 		[false, Body] -> 
 			cdashbot_wrk:send(error_text(Body))
 	end.
@@ -407,6 +407,19 @@ site_list() ->
 		[_, Body] -> error_text(Body)
 	end.
 
+site_list(Build) -> 
+	Url = ?URL ++ ?API_SITE,
+	case check_status(Url) of 
+		[true, Body] ->
+			Jlist = jsonx:decode(erlang:list_to_binary(Body),  [{format, proplist}]),
+			Slist = lists:sort(lists:map(fun(X) -> erlang:binary_to_list(X) end, 
+						proplists:get_all_values(<<"name">>, 
+							lists:append(proplists:get_value(<<"sites">>, 
+											Jlist))))),
+			lists:map(fun(X) -> id_tuple_gen(X, Build) end, Slist);
+		[_, Body] -> error_text(Body)
+	end.
+
 site(Rexp) -> 
 	Url = ?URL ++ ?API_SITE,
 	case check_status(Url) of 
@@ -469,3 +482,92 @@ get_date_time(Plist) ->
 					string:tokens(erlang:binary_to_list(
 						proplists:get_value(<<"time">>, Plist)),":")))}.
 
+new_builds_desc(Id) -> 
+	Url = ?URL ++ ?API_DI ++ erlang:integer_to_list(Id),
+	case check_status(Url) of 
+		[true, Body] -> 
+			Jlist = jsonx:decode(erlang:list_to_binary(Body),  [{format, proplist}]),
+			Blist = lists:append(proplists:get_value(<<"builds">>, 
+									Jlist)),
+			Bname = proplists:get_value(<<"name">>, Blist),
+			Err = proplists:get_value(<<"n_errors">>, Blist),
+			Warn = proplists:get_value(<<"n_warnings">>, Blist),
+			Testp = proplists:get_value(<<"n_test_pass">>, Blist),
+			Testf = proplists:get_value(<<"n_test_fail">>, Blist),
+			Testn = proplists:get_value(<<"n_test_not_run">>, Blist),
+			Tests = Testp ++ Testn ++ Testf,
+			case [Err, Warn, Tests] of
+				[0, Warn, Tests] when Warn =/= 0, Tests =/= 0 -> 
+					io_lib:format("Build of ~s finished. Build warnings: ~s. Tests passed: ~s/~s. ~n", [Bname,
+																										erlang:integer_to_list(Warn),
+																										erlang:integer_to_list(Testp),
+																										erlang:integer_to_list(Tests)]) ++ build_diff(Id);
+				[0, 0, Tests] when Tests =/= 0 ->
+					io_lib:format("Build of ~s finished. Tests passed: ~s/~s ~n", [Bname,
+																				   erlang:integer_to_list(Testp),
+																				   erlang:integer_to_list(Tests)]) ++ build_diff(Id);
+				[0, Warn, 0] when Warn =/= 0 ->
+					io_lib:format("Build of ~s finished. Build warnings: ~s. ~n", [Bname,
+																				   erlang:integer_to_list(Warn)]) ++ build_diff(Id);
+				[Err, Warn, _Tests] when Err =/= 0, Warn =/= 0 ->
+					io_lib:format("Build of ~s failed. Build errors: ~s, warnings: ~s ~n", [Bname,
+																							erlang:integer_to_list(Err),
+																							erlang:integer_to_list(Warn)]) ++ build_diff_fail(Id);
+				[Err, 0, _Tests] when Err =/= 0 -> 
+					io_lib:format("Build of ~s failed. Build errors: ~s ~n", [Bname,
+																			 erlang:integer_to_list(Err)]) ++ build_diff_fail(Id)
+			end;
+		[_, Body] -> error_text(Body)
+	end.
+
+build_diff_fail(_Id) -> 
+	ok.
+	
+build_diff(Id) -> 
+	Url = ?URL ++ ?API_BUILD_DIFF ++ Id,
+	case check_status(Url) of 
+		[true, Body] -> 
+			Jlist = jsonx:decode(erlang:list_to_binary(Body),  [{format, proplist}]),
+			Blist = lists:append(proplists:get_value(<<"builds">>, 
+									Jlist)),
+			Site = erlang:binary_to_list(proplists:get_value(<<"site">>, Blist)),
+			Warn = proplists:get_value(<<"diff_warnings_pos">>, Blist),
+			TestP = proplists:get_value(<<"diff_n_test_pass_pos">>, Blist),
+			TestF = proplists:get_value(<<"diff_n-test_fail_pos">>, Blist),
+			case [Warn, TestP, TestF] of 
+				[0, TestP, TestF] when TestP =/= 0, TestF =/= 0 ->
+					io_lib:format("+~s passed test, +~s failed test since last build on host ~s ~n", 
+									[erlang:integer_to_list(TestP),
+									 erlang:integer_to_list(TestF),
+									 Site]);
+				[0, 0, TestF] when TestF =/= 0 -> 
+					 io_lib:format("+~s failed test since last build on host ~s ~n", 
+									[erlang:integer_to_list(TestF),
+									 Site]);
+				[0, TestP, 0] when TestP =/= 0 -> 
+					io_lib:format("+~s passed test since last build on host ~s ~n", 
+									[erlang:integer_to_list(TestP),
+									 Site]);
+ 				[Warn, 0, 0] when Warn =/= 0 ->
+ 					io_lib:format("+~s warnings since last build on host ~s ~n", 
+									[erlang:integer_to_list(Warn),
+									 Site]);
+ 				[Warn, TestP, 0] when Warn =/= 0, TestP =/= 0 ->
+ 					io_lib:format("+~s warnings, +~s passed test since last build on host ~s ~n", 
+									[erlang:integer_to_list(Warn),
+									 erlang:integer_to_list(TestP),
+									 Site]);	
+ 				[Warn, 0 , TestF] when Warn =/= 0, TestP =/= 0 ->
+ 					io_lib:format("+~s warnings, +~s failed test since last build on host ~s ~n", 
+									[erlang:integer_to_list(Warn),
+									 erlang:integer_to_list(TestF),
+									 Site]);
+ 				[Warn, TestP, TestF] when Warn =/= 0, TestP =/= 0, TestF =/= 0 ->
+ 					io_lib:format("+~s warnings, +~s passed test, +~s failed test since last build on host ~s ~n", 
+									[erlang:integer_to_list(Warn),
+									 erlang:integer_to_list(TestP), 
+									 erlang:integer_to_list(TestF),
+									 Site])
+ 			end;
+		[_, Body] -> error_text(Body)
+	end.

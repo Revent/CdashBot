@@ -64,15 +64,19 @@ check_last_build() ->
 	lists:foreach(fun(X) -> ets:insert(build, X) end, api_module:list_id_gen()). 
 
 diff_project_id(Project) ->
-    NewTuple = api_module:id_tuple_gen(Project),
-    NewList = proplists:get_value(Project, [NewTuple]),
-    List = proplists:get_value(Project, ets:lookup(build, Project)),
-    
-    case NewList -- List =/= [] of 
+    NewTuple = api_module:site_list(Project),
+    List = proplists:get_all_values(Project, NewTuple),
+    Keys = proplists:get_keys(List),  
+    lists:foreach(fun(X) -> diff_project_id(X, 
+                                      proplists:get_value(X, List), Project, NewTuple) end, Keys).
+
+diff_project_id(Site, Ids, Project, NewTuple) -> 
+
+    List = proplists:get_value(Site, proplists:get_all_values(Project, ets:lookup(build, Project))),
+    case Ids -- List =/= [] of
         false -> ok;
-        true -> lager:info("New build: ~s", NewList -- List),
-            lists:foreach(fun(X) -> 
-                            cdashbot_wrk:send("New build" ++ api_module:describe_gen_id(erlang:list_to_integer(X))) end,
-                                  NewList -- List),
+        true -> [New, Last| _] = Ids,
+            lager:info("New build: ~s", [New]),
+            cdashbot_wrk:send(api_module:new_builds_desc(New, Last)),
             ets:insert(build, NewTuple) 
     end.
