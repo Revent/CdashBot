@@ -483,7 +483,7 @@ get_date_time(Plist) ->
 						proplists:get_value(<<"time">>, Plist)),":")))}.
 
 new_builds_desc(Id) -> 
-	Url = ?URL ++ ?API_DI ++ erlang:integer_to_list(Id),
+	Url = ?URL ++ ?API_DI ++ Id,
 	case check_status(Url) of 
 		[true, Body] -> 
 			Jlist = jsonx:decode(erlang:list_to_binary(Body),  [{format, proplist}]),
