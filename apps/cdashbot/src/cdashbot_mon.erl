@@ -75,8 +75,8 @@ diff_project_id(Site, Ids, Project, NewTuple) ->
     List = proplists:get_value(Site, proplists:get_all_values(Project, ets:lookup(build, Project))),
     case Ids -- List =/= [] of
         false -> ok;
-        true -> [New, Last| _] = Ids,
+        true -> [New | _] = Ids,
             lager:info("New build: ~s", [New]),
-            cdashbot_wrk:send(api_module:new_builds_desc(New, Last)),
+            cdashbot_wrk:send(api_module:new_builds_desc(New)),
             ets:insert(build, NewTuple) 
     end.
