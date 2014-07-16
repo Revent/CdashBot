@@ -495,7 +495,7 @@ new_builds_desc(Id) ->
 			Testp = proplists:get_value(<<"n_test_pass">>, Blist),
 			Testf = proplists:get_value(<<"n_test_fail">>, Blist),
 			Testn = proplists:get_value(<<"n_test_not_run">>, Blist),
-			Tests = Testp ++ Testn ++ Testf,
+			Tests = Testp + Testn + Testf,
 			case [Err, Warn, Tests] of
 				[0, Warn, Tests] when Warn =/= 0, Tests =/= 0 -> 
 					io_lib:format("Build of ~s finished. Build warnings: ~s. Tests passed: ~s/~s. ~n", [Bname,
