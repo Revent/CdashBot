@@ -535,7 +535,7 @@ build_diff(Id) ->
 			Site = erlang:binary_to_list(proplists:get_value(<<"site">>, Blist)),
 			Warn = proplists:get_value(<<"diff_warnings_pos">>, Blist),
 			TestP = proplists:get_value(<<"diff_n_test_pass_pos">>, Blist),
-			TestF = proplists:get_value(<<"diff_n-test_fail_pos">>, Blist),
+			TestF = proplists:get_value(<<"diff_n_test_fail_pos">>, Blist),
 			case [Warn, TestP, TestF] of 
 				[0, TestP, TestF] when TestP =/= 0, TestF =/= 0 ->
 					io_lib:format("+~s passed test, +~s failed test since last build on host ~s ~n", 
