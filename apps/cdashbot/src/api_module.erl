@@ -517,7 +517,7 @@ new_builds_desc(Id) ->
 					io_lib:format("Build of ~s failed. Build errors: ~s ~n", [Bname,
 																			 erlang:integer_to_list(Err)]) ++ build_diff_fail(Id);
 				[0, 0, 0] ->
-					io_lib:format("Build of ~s finished~n", [Bname])
+					io_lib:format("Build of ~s finished~n", [Bname]) ++ build_diff(Id)
 			end;
 		[_, Body] -> error_text(Body)
 	end.
