@@ -571,7 +571,7 @@ build_diff(Id) ->
 									 erlang:integer_to_list(TestF),
 									 Site]);
  				[0,0,0] ->
- 					io_lib:format("All ok since last build on host ~s ~n", [Site]) 
+ 					ok 
  			end;
 		[_, Body] -> error_text(Body)
 	end.

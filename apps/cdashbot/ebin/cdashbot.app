@@ -1,6 +1,6 @@
 {application,cdashbot,
              [{description,"cdashbot"},
-              {vsn,"0.1"},
+              {vsn,"1.0"},
               {registered,[]},
               {applications,[kernel,inets,stdlib,exmpp]},
               {mod,{cdashbot_app,[]}},
