@@ -122,11 +122,10 @@ check_status(Url) ->
 					try jsonx:decode(erlang:list_to_binary(Body),  [{format, proplist}]) of
 						{error,_,_} -> 
 							lager:info("Wrong Json: ~s~n", [Body]),
-							check_status(Url);
+							cdashbot_wrk:send("Wrong Json see log file");
 						Jlist ->
 							Status = proplists:get_value(<<"status">>, Jlist),
 							[Status, Body]
-
 					catch 
 						_:_ -> ok
 					end;
