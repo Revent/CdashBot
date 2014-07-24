@@ -397,6 +397,7 @@ site_list() ->
 						proplists:get_all_values(<<"name">>, 
 							lists:append(proplists:get_value(<<"sites">>, 
 											Jlist))))),
+			lager:info("Slist: ~s~n", [Slist]),
 			Online = lists:map(fun(X) -> site_describe(X) ++ "online" ++ io_lib:nl() end,
 						lists:filter(fun(X) -> site_status(X) =< 300 end, Slist)),
 			Offline = lists:map(fun(X) -> site_describe(X) ++ "offline" ++io_lib:nl() end,
@@ -570,7 +571,7 @@ build_diff(Id) ->
 									 erlang:integer_to_list(TestF),
 									 Site]);
  				[0,0,0] ->
- 					ok 
+ 					"" 
  			end;
 		[_, Body] -> error_text(Body)
 	end.
