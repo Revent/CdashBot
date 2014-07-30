@@ -130,15 +130,14 @@ check_status(Url) ->
 				_:_ -> ok
 			end.
 json_validate(Body) ->
-	try jsonx:decode(erlang:list_to_binary(Body),  [{format, proplist}]) of
+	case jsonx:decode(erlang:list_to_binary(Body),  [{format, proplist}]) of
 						{error,_,_} -> 
 							lager:info("Wrong Json: ~s~n", [Body]),
-							cdashbot_wrk:send("Wrong Json see log file");
+							cdashbot_wrk:send("Wrong Json see log file"),
+							exit("not json");
 						Jlist ->
 							Status = proplists:get_value(<<"status">>, Jlist),
 							[Status, Body]
-					catch 
-						_:_ -> ok
 					end.
 
 inactive(Id, Count) ->
