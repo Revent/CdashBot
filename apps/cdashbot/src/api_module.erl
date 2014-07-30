@@ -1,8 +1,11 @@
 -module(api_module).
--export([list_gen/0, list_id_gen/0,  id_tuple_gen/2, describe_gen_id/1, 
-		list_gen_rexp/1, check_active/1, ver_gen/0, count_builds/1,
-		count_builds_week/1, list_string_gen/0, shedule_start/1, 
-		status/0, status/1, status_string/1, site_list/0, site_list/1, site/1, new_builds_desc/1]).
+-export([list_gen/0, list_id_gen/0,  id_tuple_gen/2, 
+		 describe_gen_id/1, list_gen_rexp/1, check_active/1, 
+		 ver_gen/0, count_builds/1, count_builds_week/1, 
+		 list_string_gen/0, shedule_start/1, status/0, 
+		 status/1, status_string/1, site_list/0, 
+		 site_list/1, site/1, new_builds_desc/1,
+		 json_validate/1]).
 -include_lib("cdashbot_wrk.hrl").
 %%----------------------------------------------------------------------------------------------
 %% Exported Function
@@ -119,7 +122,15 @@ ver_gen() ->
 check_status(Url) ->
 			try httpc:request(Url) of
 				{ok, {_, _, Body}} ->
-					try jsonx:decode(erlang:list_to_binary(Body),  [{format, proplist}]) of
+					json_validate(Body);
+				{error,_} ->
+					lager:info("Server is not available ~s", [Url]),
+					check_status(Url)
+			catch
+				_:_ -> ok
+			end.
+json_validate(Body) ->
+	try jsonx:decode(erlang:list_to_binary(Body),  [{format, proplist}]) of
 						{error,_,_} -> 
 							lager:info("Wrong Json: ~s~n", [Body]),
 							cdashbot_wrk:send("Wrong Json see log file");
@@ -128,14 +139,7 @@ check_status(Url) ->
 							[Status, Body]
 					catch 
 						_:_ -> ok
-					end;
-				{error,_} ->
-					lager:info("Server is not available ~s", [Url]),
-					check_status(Url)
-			catch
-				_:_ -> ok
-			end.
-
+					end.
 
 inactive(Id, Count) ->
 	Url = ?URL ++ ?API_DI ++ Id,
