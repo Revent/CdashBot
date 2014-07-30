@@ -42,3 +42,6 @@ distclean: clean
 	- rm -rvf $(CURDIR)/deps
 
 rebuild: distclean deps compile 
+
+test: 
+	$(REBAR) ct suite=all skip_deps=true
