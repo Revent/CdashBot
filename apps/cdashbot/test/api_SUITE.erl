@@ -16,9 +16,7 @@ all() ->
 
 init_per_suite(Config) ->
     % действия, выполняемые перед запуском набора тестов
-    ok = application:start(inets),
-    ok = application:start(exmpp), 
-    ok = application:start(cdashbot), 
+    
     Config.
 
 init_per_testcase(_, Config) ->
@@ -31,9 +29,7 @@ end_per_testcase(_, Config) ->
 
 end_per_suite(Config) ->
     % действия, выполняемые после завершения всего набора тестов
-    ok = application:stop(cdashbot),
-    ok = application:stop(exmpp),
-    ok = application:stop(inets),
+    
     Config.
 
 json_validate_test_true(_Config) ->
