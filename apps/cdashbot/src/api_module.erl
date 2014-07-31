@@ -8,7 +8,7 @@
 		 ver_gen/0]).
 
 %% API for test export
--export([json_validate/1]).
+-export([json_validate/1, check_status/1]).
 
 -include_lib("cdashbot_wrk.hrl").
 %%----------------------------------------------------------------------------------------------
@@ -265,15 +265,13 @@ id_tuple_gen(Site, Project) ->
 	
 %% Проверяем статус в Json
 check_status(Url) ->
-			try httpc:request(Url) of
+			case httpc:request(Url) of
 				{ok, {_, _, Body}} ->
 					json_validate(Body);
-				{error,_} ->
+				{error, _} ->
 					lager:info("Server is not available ~s", [Url]),
-					check_status(Url)
-
-			catch
-				_:_ -> ok
+					cdashbot_wrk:send("Server is not available, see log file"), 
+					exit("Server is not available")
 			end.
 
 json_validate(Body) ->
@@ -415,7 +413,7 @@ builds_select(Rexp, Count) ->
 	case check_status(Url) of 
 		[true, Body] ->
 			Jlist = jsonx:decode(erlang:list_to_binary(Body),  [{format, proplist}]),
-			List = lists:append(proplists:get_value(<<"builds">>, Jlist)),
+			List = lists:reverse(lists:append(proplists:get_value(<<"builds">>, Jlist))),
 			Id = proplists:get_all_values(<<"id">>, List),
 			Name = proplists:get_all_values(<<"name">>, List),
 			Site = proplists:get_all_values(<<"site">>, List),
