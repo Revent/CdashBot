@@ -11,6 +11,8 @@
 -export([json_validate/1, check_status/1]).
 
 -include_lib("cdashbot_wrk.hrl").
+
+
 %%----------------------------------------------------------------------------------------------
 %% Exported Function
 %%----------------------------------------------------------------------------------------------
@@ -234,16 +236,12 @@ ver_gen() ->
 	Url = ?URL ++ ?API_VER,
 	case check_status(Url) of 
 		[true, Body] -> 
+			[ok, Ver] = erlang:tuple_to_list(application:get_key(cdashbot, vsn)), 
 			List = erlang:binary_to_list(proplists:get_value(<<"version">>, jsonx:decode(erlang:list_to_binary(Body),  [{format, proplist}]))), 
-			io_lib:format("CDash version: ~s~n", [List]);
+			io_lib:format("CDash version: ~s~n CdashBot version: ~s~n", [List, Ver]);
 		[_, Body] -> 
 			error_text(Body)
 	end.
-
-
-
-
-
 
 %%----------------------------------------------------------------------------------------------
 %% Internal Function
@@ -265,25 +263,25 @@ id_tuple_gen(Site, Project) ->
 	
 %% Проверяем статус в Json
 check_status(Url) ->
-			case httpc:request(Url) of
-				{ok, {_, _, Body}} ->
-					json_validate(Body);
-				{error, _} ->
-					lager:info("Server is not available ~s", [Url]),
-					cdashbot_wrk:send("Server is not available, see log file"), 
-					exit("Server is not available")
-			end.
+	case httpc:request(Url) of
+		{ok, {_, _, Body}} ->
+			json_validate(Body);
+		{error, _} ->
+			lager:info("Server is not available ~s", [Url]),
+			cdashbot_wrk:send("Server is not available, see log file"), 
+			exit("Server is not available")
+	end.
 
 json_validate(Body) ->
 	case jsonx:decode(erlang:list_to_binary(Body),  [{format, proplist}]) of
-						{error,_,_} -> 
-							lager:info("Wrong Json: ~s~n", [Body]),
-							cdashbot_wrk:send("Wrong Json see log file"),
-							exit("not json");
-						Jlist ->
-							Status = proplists:get_value(<<"status">>, Jlist),
-							[Status, Body]
-					end.
+		{error,_,_} -> 
+			lager:info("Wrong Json: ~s~n", [Body]),
+			cdashbot_wrk:send("Wrong Json see log file"),
+			exit("not json");
+		Jlist ->
+			Status = proplists:get_value(<<"status">>, Jlist),
+			[Status, Body]
+	end.
 
 inactive(Id, Count) ->
 	Url = ?URL ++ ?API_DI ++ Id,
@@ -581,3 +579,4 @@ build_diff(Id) ->
  			end;
 		[_, Body] -> error_text(Body)
 	end.
+
