@@ -13,3 +13,4 @@
 {projects_list, "all"}.
 {notify_strategy, "all"}.
 {cdash_users, ""}. %users list for manage cdash
+{show_urls,false}.

@@ -3,6 +3,7 @@
 -define(PASS, config:get_value(cdash_password)).
 -define(PLIST, config:get_value(projects_list)).
 -define(NOTIFY, config:get_value(notify_strategy)).
+-define(PURLS, config:get_value(show_urls)).
 -define(KEYS, os:getenv("HOME") ++ "/.config/cdashbot/cdash_keys").
 -define(USERS, config:get_value(cdash_users)).
 -define(API_LIST, "/api/?method=project&task=list").
@@ -36,6 +37,7 @@
 -define(API_BUILD_SITE, "&site=").
 -define(API_SITE_DESCRIBE, "/api/?method=site&task=describe&site=").
 -define(API_BUILD_DIFF, "/api/?method=build&task=diff&bid=").
+-define(BSUMM, "/buildSummary.php?buildid=").
 
 %% ------------------------------------------------------------------
 %% Records

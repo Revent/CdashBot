@@ -531,6 +531,10 @@ build_diff_fail(_Id) ->
 	
 build_diff(Id) -> 
 	Url = ?URL ++ ?API_BUILD_DIFF ++ Id,
+	Purl = case ?PURLS of 
+			true -> ?URL ++ ?BSUMM ++ Id;
+			false -> ""
+		   end,
 	case check_status(Url) of 
 		[true, Body] -> 
 			Jlist = jsonx:decode(erlang:list_to_binary(Body),  [{format, proplist}]),
@@ -545,37 +549,37 @@ build_diff(Id) ->
 					io_lib:format("+~s passed test, +~s failed test since last build on host ~s ~n", 
 									[erlang:integer_to_list(TestP),
 									 erlang:integer_to_list(TestF),
-									 Site]);
+									 Site]) ++ Purl;
 				[0, 0, TestF] when TestF =/= 0 -> 
 					 io_lib:format("+~s failed test since last build on host ~s ~n", 
 									[erlang:integer_to_list(TestF),
-									 Site]);
+									 Site]) ++ Purl;
 				[0, TestP, 0] when TestP =/= 0 -> 
 					io_lib:format("+~s passed test since last build on host ~s ~n", 
 									[erlang:integer_to_list(TestP),
-									 Site]);
+									 Site]) ++ Purl;
  				[Warn, 0, 0] when Warn =/= 0 ->
  					io_lib:format("+~s warnings since last build on host ~s ~n", 
 									[erlang:integer_to_list(Warn),
-									 Site]);
+									 Site]) ++ Purl;
  				[Warn, TestP, 0] when Warn =/= 0, TestP =/= 0 ->
  					io_lib:format("+~s warnings, +~s passed test since last build on host ~s ~n", 
 									[erlang:integer_to_list(Warn),
 									 erlang:integer_to_list(TestP),
-									 Site]);	
+									 Site]) ++ Purl;	
  				[Warn, 0 , TestF] when Warn =/= 0, TestP =/= 0 ->
  					io_lib:format("+~s warnings, +~s failed test since last build on host ~s ~n", 
 									[erlang:integer_to_list(Warn),
 									 erlang:integer_to_list(TestF),
-									 Site]);
+									 Site]) ++ Purl;
  				[Warn, TestP, TestF] when Warn =/= 0, TestP =/= 0, TestF =/= 0 ->
  					io_lib:format("+~s warnings, +~s passed test, +~s failed test since last build on host ~s ~n", 
 									[erlang:integer_to_list(Warn),
 									 erlang:integer_to_list(TestP), 
 									 erlang:integer_to_list(TestF),
-									 Site]);
+									 Site]) ++ Purl;
  				[0,0,0] ->
- 					"" 
+ 					"" ++ Purl
  			end;
 		[_, Body] -> error_text(Body)
 	end.
