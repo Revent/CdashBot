@@ -104,23 +104,28 @@ new_builds_desc(Id) ->
 			Testf = proplists:get_value(<<"n_test_fail">>, Blist),
 			Testn = proplists:get_value(<<"n_test_not_run">>, Blist),
 			Tests = Testp + Testn +  Testf,
+			lager:debug("Id: ~s, Test Sum: ~w", [Id, Tests]),
 			case [Err, Warn, Tests] of
 				[0, Warn, Tests] when Warn =/= 0, Tests =/= 0 -> 
-					io_lib:format("Build of ~s finished. Build warnings: ~s. Tests passed: ~s/~s. ~n", [Bname,
-																										erlang:integer_to_list(Warn),
-																										erlang:integer_to_list(Testp),
-																										erlang:integer_to_list(Tests)]) ++ build_diff(Id);
+					io_lib:format("Build of ~s finished. Build warnings: ~s. Tests passed: ~s/~s. ~n", 
+						[Bname,
+						erlang:integer_to_list(Warn),
+						erlang:integer_to_list(Testp),
+						erlang:integer_to_list(Tests)]) ++ build_diff(Id);
 				[0, 0, Tests] when Tests =/= 0 ->
-					io_lib:format("Build of ~s finished. Tests passed: ~s/~s ~n", [Bname,
-																				   erlang:integer_to_list(Testp),
-																				   erlang:integer_to_list(Tests)]) ++ build_diff(Id);
+					io_lib:format("Build of ~s finished. Tests passed: ~s/~s ~n", 
+						[Bname,
+						erlang:integer_to_list(Testp),
+						erlang:integer_to_list(Tests)]) ++ build_diff(Id);
 				[0, Warn, 0] when Warn =/= 0 ->
-					io_lib:format("Build of ~s finished. Build warnings: ~s. ~n", [Bname,
-																				   erlang:integer_to_list(Warn)]) ++ build_diff(Id);
+					io_lib:format("Build of ~s finished. Build warnings: ~s. ~n", 
+						[Bname,
+						erlang:integer_to_list(Warn)]) ++ build_diff(Id);
 				[Err, Warn, _Tests] when Err =/= 0, Warn =/= 0 ->
-					io_lib:format("Build of ~s failed. Build errors: ~s, warnings: ~s ~n", [Bname,
-																							erlang:integer_to_list(Err),
-																							erlang:integer_to_list(Warn)]) ++ build_diff_fail(Id);
+					io_lib:format("Build of ~s failed. Build errors: ~s, warnings: ~s ~n", 
+						[Bname,
+						erlang:integer_to_list(Err),
+						erlang:integer_to_list(Warn)]) ++ build_diff_fail(Id);
 				[Err, 0, _Tests] when Err =/= 0 -> 
 					io_lib:format("Build of ~s failed. Build errors: ~s ~n", [Bname,
 																			 erlang:integer_to_list(Err)]) ++ build_diff_fail(Id);
@@ -527,13 +532,13 @@ get_date_time(Plist) ->
 						proplists:get_value(<<"time">>, Plist)),":")))}.
 
 build_diff_fail(_Id) -> 
-	ok.
+	[].
 	
 build_diff(Id) -> 
 	Url = ?URL ++ ?API_BUILD_DIFF ++ Id,
 	Purl = case ?PURLS of 
-			true -> "Details:" ++ ?URL ++ ?BSUMM ++ Id;
-			false -> ""
+			true -> "Details: " ++ ?URL ++ ?BSUMM ++ Id;
+			false -> " "
 		   end,
 	case check_status(Url) of 
 		[true, Body] -> 
@@ -546,40 +551,47 @@ build_diff(Id) ->
 			TestF = proplists:get_value(<<"diff_n_test_fail_pos">>, Blist),
 			case [Warn, TestP, TestF] of 
 				[0, TestP, TestF] when TestP =/= 0, TestF =/= 0 ->
-					io_lib:format("+~s passed test, +~s failed test since last build on host ~s ~n", 
+					io_lib:format("+~s passed test, +~s failed test since last build on host ~s ~n ~s", 
 									[erlang:integer_to_list(TestP),
 									 erlang:integer_to_list(TestF),
-									 Site]) ++ Purl;
+									 Site,
+									 Purl]);
 				[0, 0, TestF] when TestF =/= 0 -> 
-					 io_lib:format("+~s failed test since last build on host ~s ~n", 
+					 io_lib:format("+~s failed test since last build on host ~s ~n ~s", 
 									[erlang:integer_to_list(TestF),
-									 Site]) ++ Purl;
+									 Site,
+									 Purl]);
 				[0, TestP, 0] when TestP =/= 0 -> 
-					io_lib:format("+~s passed test since last build on host ~s ~n", 
+					io_lib:format("+~s passed test since last build on host ~s ~n ~s", 
 									[erlang:integer_to_list(TestP),
-									 Site]) ++ Purl;
+									 Site,
+									 Purl]);
  				[Warn, 0, 0] when Warn =/= 0 ->
- 					io_lib:format("+~s warnings since last build on host ~s ~n", 
+ 					io_lib:format("+~s warnings since last build on host ~s ~n ~s", 
 									[erlang:integer_to_list(Warn),
-									 Site]) ++ Purl;
+									 Site,
+									 Purl]);
  				[Warn, TestP, 0] when Warn =/= 0, TestP =/= 0 ->
- 					io_lib:format("+~s warnings, +~s passed test since last build on host ~s ~n", 
+ 					io_lib:format("+~s warnings, +~s passed test since last build on host ~s ~n ~s", 
 									[erlang:integer_to_list(Warn),
 									 erlang:integer_to_list(TestP),
-									 Site]) ++ Purl;	
+									 Site,
+									 Purl]);	
  				[Warn, 0 , TestF] when Warn =/= 0, TestP =/= 0 ->
- 					io_lib:format("+~s warnings, +~s failed test since last build on host ~s ~n", 
+ 					io_lib:format("+~s warnings, +~s failed test since last build on host ~s ~n ~s", 
 									[erlang:integer_to_list(Warn),
 									 erlang:integer_to_list(TestF),
-									 Site]) ++ Purl;
+									 Site,
+									 Purl]);
  				[Warn, TestP, TestF] when Warn =/= 0, TestP =/= 0, TestF =/= 0 ->
- 					io_lib:format("+~s warnings, +~s passed test, +~s failed test since last build on host ~s ~n", 
+ 					io_lib:format("+~s warnings, +~s passed test, +~s failed test since last build on host ~s ~n ~s", 
 									[erlang:integer_to_list(Warn),
 									 erlang:integer_to_list(TestP), 
 									 erlang:integer_to_list(TestF),
-									 Site]) ++ Purl;
+									 Site,
+									 Purl]);
  				[0,0,0] ->
- 					"" ++ Purl
+ 					Purl
  			end;
 		[_, Body] -> error_text(Body)
 	end.
