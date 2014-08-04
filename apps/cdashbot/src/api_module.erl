@@ -532,7 +532,7 @@ build_diff_fail(_Id) ->
 build_diff(Id) -> 
 	Url = ?URL ++ ?API_BUILD_DIFF ++ Id,
 	Purl = case ?PURLS of 
-			true -> ?URL ++ ?BSUMM ++ Id;
+			true -> "Details:" ++ ?URL ++ ?BSUMM ++ Id;
 			false -> ""
 		   end,
 	case check_status(Url) of 
