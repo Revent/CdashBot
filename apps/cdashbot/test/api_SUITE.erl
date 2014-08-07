@@ -42,8 +42,8 @@ json_validate_test_false(_Config) ->
 
 json_validate_test_error(_Config) -> 
   Body = "not json",
-  ?assertExit("not json", api_module:json_validate(Body)).
+  ?assertExit("Not json see log file", api_module:json_validate(Body)).
 
 check_status_test_error(_Config) -> 
     Url = "localhost",
-    ?assertExit("Server is not available", api_module:check_status(Url)).
+    ?assertExit("Server is not available, see log file", api_module:check_status(Url)).
