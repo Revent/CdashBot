@@ -36,8 +36,8 @@ list_gen() ->
 	case string:equal(?PLIST, "all")  of
 		true -> 
 			Body = get_body(?URL ++ ?API_LIST),
-						[erlang:binary_to_list(X) || X <- proplists:get_all_values(<<"name">>, 
-						lists:append(proplists:get_value(<<"projects">>, jsonx:decode(erlang:list_to_binary(Body),  [{format, proplist}]))))];
+			[erlang:binary_to_list(X) || X <- proplists:get_all_values(<<"name">>, 
+					lists:append(proplists:get_value(<<"projects">>, jsonx:decode(erlang:list_to_binary(Body),  [{format, proplist}]))))];
 		false -> [?PLIST]
 	end.
 
