@@ -6,5 +6,5 @@
 
 4. make compile
 
-5. cd rel/cbot && sh bin/cbot console
+5. make console or make start (need create /var/log/cdashbot before) 
  
