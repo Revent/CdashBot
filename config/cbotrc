@@ -14,3 +14,4 @@
 {notify_strategy, "all"}.
 {cdash_users, ""}. %users list for manage cdash
 {show_urls,false}.
+{cbot_logs_dir, "/var/log/cdashbot"}.

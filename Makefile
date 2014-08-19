@@ -45,3 +45,7 @@ rebuild: distclean deps compile
 
 test: 
 	$(REBAR) ct suite=all skip_deps=true
+console:
+	rel/cbot/bin/cbot console
+start:
+	rel/cbot/bin/cbot start
