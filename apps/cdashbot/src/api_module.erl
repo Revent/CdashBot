@@ -1,10 +1,10 @@
 -module(api_module).
 %% API export
 -export([check_active/1, list_gen/0, list_gen_rexp/1,
-		 list_id_gen/0, list_string_gen/0, new_builds_desc/1, 
-		 site/1, site_list/0, site_list/1, 
-		 shedule_start/1, status/0, status/1, 
-		 ver_gen/0]).
+  list_id_gen/0, list_string_gen/0, new_builds_desc/1,
+  site/1, site_list/0, site_list/1,
+  shedule_start/1, status/0, status/1,
+  ver_gen/0, describe_gen/1]).
 
 %% API for test export
 -export([json_validate/1, check_status/1, get_body/1]).
@@ -15,12 +15,13 @@
 %%----------------------------------------------------------------------------------------------
 %% Exported Function
 %%----------------------------------------------------------------------------------------------
+-spec check_active(string()) -> string().
 check_active(Rexp) -> 
 	Body = get_body(?URL ++ ?API_BL ++ Rexp ++ ?API_CN),
 	List = lists:append(proplists:get_value(<<"builds">>, 
 	jsonx:decode(erlang:list_to_binary(Body),  [{format, proplist}]))),
 	{Date, _Time} = get_date_time(List),
-	Id = erlang:integer_to_list(proplists:get_value(<<"id">>, List)), 
+	Id = erlang:integer_to_list(proplists:get_value(<<"id">>, List)),
 	Count = calendar:date_to_gregorian_days(date()) - calendar:date_to_gregorian_days(Date),
 	case  Count =< 7 of
 		true -> 
@@ -32,6 +33,7 @@ check_active(Rexp) ->
 					
 	end.
 %% Проверяем и генерируем список проектов.
+-spec list_gen() -> list().
 list_gen() ->
 	case string:equal(?PLIST, "all")  of
 		true -> 
@@ -41,7 +43,8 @@ list_gen() ->
 		false -> [?PLIST]
 	end.
 
-list_gen_rexp(Rexp) -> 
+-spec list_gen_rexp(string()) -> list().
+list_gen_rexp(Rexp) ->
 	Plist = case string:equal(?PLIST, "all") of
 	true  -> 
 		Body = get_body(?URL ++ ?API_LIST),
@@ -59,13 +62,16 @@ list_gen_rexp(Rexp) ->
 			lists:filter(Filt, Plist)). 
 
 %% Генерируем первоначальный список для монитора
-list_id_gen() ->  
+-spec list_id_gen() -> list().
+list_id_gen() ->
 	lists:map(fun(X) -> site_list(X) end, list_gen()).
 
 %% Генерируем строку сообщения	
-list_string_gen() -> 
+-spec list_string_gen() -> string().
+list_string_gen() ->
 	string:join(lists:map(fun(X) -> describe_gen(X) end, list_gen()), " ").
 
+-spec new_builds_desc(string()) -> string().
 new_builds_desc(Id) -> 
 	Body = get_body(?URL ++ ?API_DI ++ Id),
 	Jlist = jsonx:decode(erlang:list_to_binary(Body),  [{format, proplist}]),
@@ -106,8 +112,9 @@ new_builds_desc(Id) ->
 		[0, 0, 0] ->
 			io_lib:format("Build of ~s finished~n", [Bname]) ++ build_diff(Id)
 	end.
-	
-site(Rexp) -> 
+
+-spec site(string()) -> list().
+site(Rexp) ->
 	Body = get_body(?URL ++ ?API_SITE),
 	{ok, Rexpc} = re:compile(Rexp, [unicode, caseless]), 
 	Filt = fun(Y) ->
@@ -125,6 +132,7 @@ site(Rexp) ->
 				lists:filter(fun(X) -> site_status(X) > 300 end, Slist)),
 	Online ++ Offline.
 
+-spec site_list() -> list().
 site_list() ->
 	Body = get_body(?URL ++ ?API_SITE),
 	Jlist = jsonx:decode(erlang:list_to_binary(Body),  [{format, proplist}]),
@@ -139,7 +147,8 @@ site_list() ->
 				lists:filter(fun(X) -> site_status(X) > 300 end, Slist)),
 	Online ++ Offline.
 
-site_list(Build) -> 
+-spec site_list(string()) -> list().
+site_list(Build) ->
 	Body = get_body(?URL ++ ?API_SITE),
 	Jlist = jsonx:decode(erlang:list_to_binary(Body),  [{format, proplist}]),
 	Slist = lists:sort(lists:map(fun(X) -> erlang:binary_to_list(X) end, 
@@ -148,7 +157,8 @@ site_list(Build) ->
 										Jlist))))),
 	lists:map(fun(X) -> id_tuple_gen(X, Build) end, Slist).
 
-shedule_start(Rexp) -> 
+-spec shedule_start(string()) -> string().
+shedule_start(Rexp) ->
 	[PName | Options] = Rexp,
 	  try make_string(Options) of 	
 		Plist -> 
@@ -162,23 +172,26 @@ shedule_start(Rexp) ->
 	  catch
 		[error, Key] -> 
 			cdashbot_wrk:send(io_lib:format("Wrong param: ~s~n", [string:sub_string(Key, 2)]))
-		end. 
+		end.
 
+-spec status() -> list().
 status() ->
 	Body = get_body(?URL ++ ?API_STATUS_LIST),
 	Jlist = jsonx:decode(erlang:list_to_binary(Body),  [{format, proplist}]),
 	List = lists:append(proplists:get_value(<<"schedules">>, Jlist)),
 			status(proplists:get_all_values(<<"id">>, List)).
 
-status(Rexp) -> 
+-spec status(string()) -> list().
+status(Rexp) ->
 	lists:map(fun(X) -> status_string(
 		case is_integer(X) of 
 			true -> 
 				X;
 			false ->
 				erlang:list_to_integer(X)
-		end) end, Rexp). 
+		end) end, Rexp).
 
+-spec ver_gen() -> string().
 ver_gen() ->
 	Body = get_body(?URL ++ ?API_VER),
 	[ok, Ver] = erlang:tuple_to_list(application:get_key(cdashbot, vsn)), 
@@ -190,6 +203,7 @@ ver_gen() ->
 %% Internal Function
 %%----------------------------------------------------------------------------------------------
 %% Генерируем кортеж для ets для монитора
+-spec id_tuple_gen(string(), string()) -> tuple().
 id_tuple_gen(Site, Project) ->
 	Body = get_body(?URL ++ ?API_BL ++ Project ++ ?API_BUILD_SITE ++ Site ++ ?API_CN10),
 	List = lists:append(proplists:get_value(<<"builds">>, 
@@ -198,48 +212,51 @@ id_tuple_gen(Site, Project) ->
 	Id = lists:map(fun(X) -> erlang:integer_to_list(X) end, Id_list), 
 			{Project, {Site, Id}}.
 
-get_body(Url) -> 
-	case catch check_status(Url) of
+-spec get_body(string()) -> string().
+get_body(Url) ->
+	case check_status(Url) of
 		[true, Body] -> 
 			Body;
 		[false, Body] -> 
-			error_text(Body);
-		{'EXIT', Message} -> 
-			cdashbot_wrk:send(Message)
+			error_text(Body)
 	end. 
 
 	
 %% Проверяем статус в Json
+-spec check_status(string()) -> list().
 check_status(Url) ->
 	case  httpc:request(Url) of
 		{ok, {_, _, Body}} ->
 			json_validate(Body);
 		{error, _} ->
 			lager:error("Server is not available ~s", [Url]),
-			exit("Server is not available, see log file")
+			exit(normal)
 	end.
 
+-spec json_validate(string()) -> list().
 json_validate(Body) ->
 	case jsonx:decode(erlang:list_to_binary(Body),  [{format, proplist}]) of
 		{error,_,_} -> 
 			lager:error("Wrong Json: ~s~n", [Body]),
-			exit("Not json see log file");
+			exit(normal);
 		Jlist ->
 			Status = proplists:get_value(<<"status">>, Jlist),
 			[Status, Body]
 	end.
 
+-spec inactive(string(), integer()) -> string().
 inactive(Id, Count) ->
 	Body = get_body(?URL ++ ?API_DI ++ Id),
 	List = lists:append(proplists:get_value(<<"builds">>, jsonx:decode(erlang:list_to_binary(Body),  [{format, proplist}]))),
 	Name = proplists:get_value(<<"project">>, List),
-			io_lib:format("Project ~s is inactive (no builds for more than ~w days)",
+	Header = io_lib:format("Project ~s is inactive (no builds for more than ~w days ~n)",
       						[Name, 
       						Count]),
-	"Last build" ++ describe_gen_id(erlang:list_to_integer(Id)).
+	Header ++ "Last build" ++ describe_gen_id(erlang:list_to_integer(Id)).
 	
 %% Считаем количество сборок за неделю у активного проекта и генерируем сообщение в зависимости от количества
 
+-spec active(string()) -> string().
 active(Rexp) ->
 	Count = count_builds(Rexp),
 	case  Count =< 2 of
@@ -251,6 +268,7 @@ active(Rexp) ->
 						Rexp]) ++ lists:concat(builds_select(Rexp, 3))
 	end.
 
+-spec active10(string()) -> string().
 active10(Rexp) ->
 	Count = count_builds_week(Rexp),
 	io_lib:format("~w builds for project ~s last week ~n", 
@@ -258,6 +276,7 @@ active10(Rexp) ->
 						 Rexp]) ++ lists:concat(builds_select(Rexp, 7)).
 
 %% Генерируем описание проекта
+-spec describe_gen(string()) -> string().
 describe_gen(Name) -> 
 	Body = get_body(?URL ++ ?API_DESC ++ Name),
 	List = lists:append(proplists:get_value(<<"projects">>, jsonx:decode(erlang:list_to_binary(Body),  [{format, proplist}]))),
@@ -266,6 +285,7 @@ describe_gen(Name) ->
 	io_lib:format("~s - ~s. ~n", [NamP, DescP]).
 
 %%Генерируем суммари  по проекту.
+-spec describe_gen_id(integer()) -> string().
 describe_gen_id(Id) ->
 	Body = get_body(?URL ++ ?API_DI ++ erlang:integer_to_list(Id)),
 	List = lists:append(proplists:get_value(<<"builds">>, jsonx:decode(erlang:list_to_binary(Body),  [{format, proplist}]))),
@@ -310,27 +330,32 @@ describe_gen_id(Id) ->
 
 %% Генерация ошибку и Json
 
+-spec error_text(string()) -> string().
 error_text(Body) ->
 			ErrText = proplists:get_value(<<"message">>, jsonx:decode(erlang:list_to_binary(Body),  [{format, proplist}])),
 			io_lib:format("Error: ~s", [erlang:binary_to_list(ErrText)]).
 
-count_builds(Rexp) -> 
+-spec count_builds(string()) -> non_neg_integer().
+count_builds(Rexp) ->
 	Body = get_body(?URL ++ ?API_BL ++ Rexp ++ ?API_DN ++ day_range(3)),
 	erlang:length(proplists:get_all_values(<<"id">>, 
 	lists:append(proplists:get_value(<<"builds">>, jsonx:decode(erlang:list_to_binary(Body),  [{format, proplist}]))))).
 
-count_builds_week(Rexp) ->  
+-spec count_builds_week(string()) -> non_neg_integer().
+count_builds_week(Rexp) ->
 	Body = get_body(?URL ++ ?API_BL ++ Rexp ++ ?API_DN ++ day_range(7)),
 	erlang:length(proplists:get_all_values(<<"id">>, 
 	lists:append(proplists:get_value(<<"builds">>, jsonx:decode(erlang:list_to_binary(Body),  [{format, proplist}]))))).
 
-day_range(Count) -> 
+-spec day_range(integer()) -> string().
+day_range(Count) ->
 	StringToday = string:join(io_lib:format("~w~w~w", erlang:tuple_to_list(erlang:date())), "-"),
 	ThreeDay = string:join(io_lib:format("~w~w~w", erlang:tuple_to_list(
 							calendar:gregorian_days_to_date((
 								calendar:date_to_gregorian_days(erlang:date()) - Count)))), "-"),
 	string:join([ThreeDay, StringToday], ",").
 
+-spec builds_select(string(), integer()) -> list().
 builds_select(Rexp, Count) ->
 	Body = get_body(?URL ++ ?API_BL ++ Rexp ++ ?API_DN ++ day_range(Count)),
 	Jlist = jsonx:decode(erlang:list_to_binary(Body),  [{format, proplist}]),
@@ -346,7 +371,8 @@ builds_select(Rexp, Count) ->
 							lists:usort(Name)),
 	lists:map(fun(X) -> "Last build" ++ describe_gen_id(X) end, lists:append(Blist)).
 
-make_string([Key, Value | List]) -> 
+-spec make_string(list()) -> list().
+make_string([Key, Value | List]) ->
 	case [string:sub_string(Key, 2), Value] of
 		["type", "exp"] -> 
 			[lists:concat(io_lib:format("~s~s~s~s", ["&", string:sub_string(Key, 2), "=", "0"])) | make_string(List)];
@@ -384,6 +410,7 @@ make_string([Key])-> throw([error, Key]);
 
 make_string([])-> [].
 
+-spec status_string(integer()) -> string().
 status_string(Id) ->
 	Body = get_body(?URL ++ ?API_STATUS_DESCRIBE ++ erlang:integer_to_list(Id)),
 	Jlist = jsonx:decode(erlang:list_to_binary(Body),  [{format, proplist}]),
@@ -403,18 +430,18 @@ status_string(Id) ->
 									 Status,
 									 Site])
 	end.
-		
 
+
+-spec site_status(string()) -> integer().
 site_status(Site) ->
 	Body = get_body(?URL ++ ?API_SITE_DESCRIBE ++ Site),
 	Jlist = jsonx:decode(erlang:list_to_binary(Body),  [{format, proplist}]),
 	Slist = proplists:get_value(<<"last_ping">>, lists:append(proplists:get_value(<<"sites">>, 
 									Jlist))),
-			
-			
 	NowS = calendar:datetime_to_gregorian_seconds(calendar:now_to_universal_time(erlang:now())),
 	NowS - calendar:datetime_to_gregorian_seconds(get_date_time(Slist)).
 
+-spec site_describe(string()) -> string().
 site_describe(Site) ->
 	Body = get_body(?URL ++ ?API_SITE_DESCRIBE ++ Site),
 	Jlist = jsonx:decode(erlang:list_to_binary(Body),  [{format, proplist}]),
@@ -425,8 +452,9 @@ site_describe(Site) ->
 	io_lib:format("~s: ~s (~s) - ", [Site,
 								    System,
 								    Os]).
-	
-get_date_time(Plist) -> 
+
+-spec get_date_time(list()) -> tuple().
+get_date_time(Plist) ->
 	{{erlang:binary_to_integer(proplists:get_value(<<"year">>, Plist)),
 	 erlang:binary_to_integer(proplists:get_value(<<"month">>, Plist)),
 	 erlang:binary_to_integer(proplists:get_value(<<"day">>, Plist))},
@@ -435,10 +463,12 @@ get_date_time(Plist) ->
 					string:tokens(erlang:binary_to_list(
 						proplists:get_value(<<"time">>, Plist)),":")))}.
 
-build_diff_fail(_Id) -> 
+-spec build_diff_fail(any()) -> list().
+build_diff_fail(_Id) ->
 	[].
-	
-build_diff(Id) -> 
+
+-spec build_diff(string()) -> string().
+build_diff(Id) ->
 	Body = get_body(?URL ++ ?API_BUILD_DIFF ++ Id),
 	Purl = case ?PURLS of 
 			true -> "Details: " ++ ?URL ++ ?BSUMM ++ Id;
