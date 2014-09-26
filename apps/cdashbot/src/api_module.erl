@@ -249,7 +249,7 @@ inactive(Id, Count) ->
 	Body = get_body(?URL ++ ?API_DI ++ Id),
 	List = lists:append(proplists:get_value(<<"builds">>, jsonx:decode(erlang:list_to_binary(Body),  [{format, proplist}]))),
 	Name = proplists:get_value(<<"project">>, List),
-	Header = io_lib:format("Project ~s is inactive (no builds for more than ~w days ~n)",
+	Header = io_lib:format("Project ~s is inactive (no builds for more than ~w days)~n",
       						[Name, 
       						Count]),
 	Header ++ "Last build" ++ describe_gen_id(erlang:list_to_integer(Id)).
