@@ -5,7 +5,7 @@ otp_release:
   - 17.1
   - 17.0
 
-script: "make clean && make compile && make test"
+script: "make deps && make clean && make compile && make test"
 branches:
   only:
     - master

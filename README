@@ -7,3 +7,6 @@ CDashBot is written in Erlang. See INSTALL file for building instuctions.
 
 If you want to report a bug or help developing CDashBot visit
 https://github.com/Revent/CdashBot .
+
+[![Build
+Status](https://travis-ci.org/Revent/CdashBot.svg?branch=master)](https://travis-ci.org/Revent/CdashBot)
