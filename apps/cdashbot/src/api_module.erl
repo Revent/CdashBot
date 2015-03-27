@@ -316,7 +316,7 @@ inactive(Id, Count) ->
       cdashbot_wrk:send(Reason)
   end.
 
-	
+
 %% Считаем количество сборок за неделю у активного проекта и генерируем сообщение в зависимости от количества
 
 -spec active(string()) -> string().
