@@ -9,3 +9,6 @@ If you want to report a bug or help developing CDashBot visit
 https://github.com/Revent/CdashBot .
 
 [![BuildStatus](https://travis-ci.org/Revent/CdashBot.svg?branch=master)](https://travis-ci.org/Revent/CdashBot)
+
+
+[![Join the chat at https://gitter.im/Revent/CdashBot](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/Revent/CdashBot?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
